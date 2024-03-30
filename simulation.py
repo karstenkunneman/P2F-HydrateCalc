@@ -23,16 +23,16 @@ boltzmannConstant = 1.380649E-23 #m^2 kg/s^2 K
 def PengRobinson(compoundData, moleFractions, T, P):
     #Calculate "b" value for each pure substance and add to weighted and unweighted lists
     bmix = 0
-    b = [0]*len(compounds)
-    for i in range(len(compounds)):    
+    b = [0]*len(moleFractions)
+    for i in range(len(moleFractions)):    
         Tc = compoundData[i][2]
         Pc = compoundData[i][3]*1E6
         b[i] = 0.07780*(R*Tc/Pc)
         bmix += b[i]*moleFractions[i]
         
     #Calculate the "a" values for all pure compounds
-    a = [0]*len(compounds)
-    for i in range(len(compounds)):
+    a = [0]*len(moleFractions)
+    for i in range(len(moleFractions)):
         Tc = compoundData[i][2]
         Pc = compoundData[i][3]*1E6
         omega = compoundData[i][4]
@@ -43,16 +43,16 @@ def PengRobinson(compoundData, moleFractions, T, P):
         a[i] = 0.45724*((R**2)*(Tc**2)/Pc)*alpha
         
     #Obtain the interaction parameters for all combinations of compounds
-    interactionParameters = [[0 for i in range(len(compounds))] for j in range(len(compounds))]
-    for i in range(len(compounds)):
-        for j in range(len(compounds)):
+    interactionParameters = [[0 for i in range(len(moleFractions))] for j in range(len(moleFractions))]
+    for i in range(len(moleFractions)):
+        for j in range(len(moleFractions)):
             interactionParameters[i][j] = mixConstants.loc[(mixConstants['Compound 1'] == compoundData[i][1]), (compoundData[j][1])].reset_index(drop=True)[0]
         
     #Finally, determine the partial "a" values based on mole ratios
     amix = 0
-    xia = [0 for i in range(len(compounds))]
-    for i in range(len(compounds)):
-        for j in range(len(compounds)):
+    xia = [0 for i in range(len(moleFractions))]
+    for i in range(len(moleFractions)):
+        for j in range(len(moleFractions)):
             amix += (math.sqrt(a[i]*a[j]))*(1-interactionParameters[i][j])*moleFractions[i]*moleFractions[j]
             xia[i] += (math.sqrt(a[i]*a[j]))*(1-interactionParameters[i][j])*moleFractions[j]
             
@@ -80,11 +80,11 @@ def PengRobinson(compoundData, moleFractions, T, P):
     VmVap = (ZVmix*R*T/P)
     VmLiq = (ZLmix*R*T/P)
     
-    fugVap = [0 for i in range(len(compounds))]
+    fugVap = [0 for i in range(len(moleFractions))]
     #fugLiq = [0 for i in range(len(compounds))]
     
     #Calculate fugacities for each of the compounds
-    for i in range(len(compounds)):
+    for i in range(len(moleFractions)):
         fugVap[i] = P*moleFractions[i]*math.exp((b[i]/bmix)*(ZVmix-1)-math.log(ZVmix-B)-(A/(2*math.sqrt(2)*B))*(2*xia[i]/amix-b[i]/bmix)*math.log((ZVmix+(1+math.sqrt(2))*B)/(ZVmix+(1-math.sqrt(2))*B)))
         #fugLiq[i] = P*moleFractions[i]*math.exp((b[i]/bmix)*(ZLmix-1)-math.log(ZLmix-B)-(A/(2*math.sqrt(2)*B))*(2*xia[i]/amix-b[i]/bmix)*math.log((ZLmix+(1+math.sqrt(2))*B)/(ZLmix+(1-math.sqrt(2))*B)))
         
@@ -269,31 +269,3 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
     SIIEqPressure = pGuess
     
     return min(SIEqPressure, SIIEqPressure)
-
-#Runtime-----------------------------------------------------------------------
-minTemp = float(input("Lower Temperature (K): ")) #Temp in K
-maxTemp = float(input("Upper Temperature (K): "))
-pressure = float(input("Pressure (MPa): "))*1E6 #Pressure in Pa
-numberOfCompounds = int(input("No. of Compounds Excluding Water: "))
-compounds = []
-moleFractions = []
-print("\n 1. Methane      2. Ethane\n 3. Propane      4. i-Butane\n 5. c-C3H6       6. H2S\n 7. Nitrogen     8. CO2\n")
-for i in range(numberOfCompounds):
-    compounds += [int(input("Compound ID " + str(i + 1) + " : "))]
-    if numberOfCompounds > 1:
-        moleFractions += [float(input("Mole Fraction of Compound " + str(i + 1) + " : "))]
-    else:
-        moleFractions = [1]
-noPoints = int(input("Number of Data Points: "))
-    
-T = numpy.arange(minTemp, maxTemp+(maxTemp-minTemp)/noPoints, (maxTemp-minTemp)/(noPoints-1))
-eqPressure = [0 for i in range(len(T))]
-for i in range(len(T)):
-    eqPressure[i] = equilibriumPressure(T[i], pressure, compounds, moleFractions)/1E6 #In MPa
-
-plt.plot(T, eqPressure, '-ok')
-plt.yscale("log")
-plt.title("Equilibrium Predictions")
-plt.xlabel("Temperature (K)")
-plt.ylabel("Pressure (MPa)")
-plt.show
