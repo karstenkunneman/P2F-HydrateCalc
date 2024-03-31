@@ -2,6 +2,7 @@ import simulation
 import streamlit as st
 import pandas as pd
 import numpy
+import matplotlib.pyplot as plt
 
 componentList = ['1. Methane', '2. Ethane', '3. Propane', '4. Isobutane', '5. Cyclopropane', '6. Hydrogen Sulfide', '7. Nitrogen', 'Carbon Dioxide']
 
@@ -32,11 +33,17 @@ if st.button("Calculate"):
         eqPressure = [0 for i in range(len(T))]
         for i in range(len(T)):
             eqPressure[i] = simulation.equilibriumPressure(T[i], guessPressure, components, moleFractions)/1E6 #In MPa
+        fig = plt.figure()
+        plt.plot(T, eqPressure, '-ok')
+        plt.yscale("log")
+        plt.title("Equilibrium Predictions")
+        plt.xlabel("Temperature (K)")
+        plt.ylabel("Pressure (MPa)")
+        st.pyplot(fig)
     else:
         eqPressure = [simulation.equilibriumPressure(T[0], guessPressure, components, moleFractions)/1E6]
     data = pd.DataFrame({'Temp (K)': T, 'Eq. Pressure (MPa)': eqPressure}, [i for i in range(len(T))])
     st.dataframe(data, hide_index = True)
-    st.line_chart(data) #TODO: Fix this
 
 st.header('Credits')
 st.markdown('''
