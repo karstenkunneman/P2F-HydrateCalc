@@ -269,31 +269,3 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
     SIIEqPressure = pGuess
     
     return min(SIEqPressure, SIIEqPressure)
-
-#Runtime-----------------------------------------------------------------------
-minTemp = float(input("Lower Temperature (K): ")) #Temp in K
-maxTemp = float(input("Upper Temperature (K): "))
-pressure = float(input("Pressure (MPa): "))*1E6 #Pressure in Pa
-numberOfCompounds = int(input("No. of Compounds Excluding Water: "))
-compounds = []
-moleFractions = []
-print("\n 1. Methane      2. Ethane\n 3. Propane      4. i-Butane\n 5. c-C3H6       6. H2S\n 7. Nitrogen     8. CO2\n")
-for i in range(numberOfCompounds):
-    compounds += [int(input("Compound ID " + str(i + 1) + " : "))]
-    if numberOfCompounds > 1:
-        moleFractions += [float(input("Mole Fraction of Compound " + str(i + 1) + " : "))]
-    else:
-        moleFractions = [1]
-noPoints = int(input("Number of Data Points: "))
-    
-T = numpy.arange(minTemp, maxTemp+(maxTemp-minTemp)/noPoints, (maxTemp-minTemp)/(noPoints-1))
-eqPressure = [0 for i in range(len(T))]
-for i in range(len(T)):
-    eqPressure[i] = equilibriumPressure(T[i], pressure, compounds, moleFractions)/1E6 #In MPa
-
-plt.plot(T, eqPressure, '-ok')
-plt.yscale("log")
-plt.title("Equilibrium Predictions")
-plt.xlabel("Temperature (K)")
-plt.ylabel("Pressure (MPa)")
-plt.show
