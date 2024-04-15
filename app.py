@@ -7,14 +7,18 @@ import matplotlib.pyplot as plt
 componentList = ['1. Methane', '2. Ethane', '3. Propane', '4. Isobutane', '5. Cyclopropane', '6. Hydrogen Sulfide', '7. Nitrogen', 'Carbon Dioxide']
 
 st.title('Gas Hydrate Equilibrium Calculator')
-st.caption('Version 2024-4-1')
+st.caption('Version 2024-4-15')
 
 noComponents = st.number_input('Number of Components', 1, None, 1, 1)
 components = []
 moleFractions = []
-for i in range(noComponents):
-    components += [int(st.selectbox('Component ' + str(i+1), componentList)[0])]
-    moleFractions += [float(st.text_input('Component ' + str(i+1) + " Mole Fraction", 1.00))]
+c1, c2 = st.columns(2)
+with c1:
+    for i in range(noComponents):
+        components += [int(st.selectbox('Component ' + str(i+1), componentList)[0])]
+with c2:
+    for i in range(noComponents):
+        moleFractions += [float(st.text_input('Component ' + str(i+1) + " Mole Fraction", 1.00))]
 
 guessPressure = float(st.text_input('Guess Pressure (MPA)', 1.00))*1E6
 
