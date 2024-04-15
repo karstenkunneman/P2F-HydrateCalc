@@ -1,0 +1,3 @@
+1. Calculation of solubility of guests in water now works as expected
+2. Altered calculation of hydrate composition, now works more closely to expected numbers (though calculation may be wrong)
+3. nu values for deltaHydratePotential function fixed

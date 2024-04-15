@@ -23,16 +23,16 @@ boltzmannConstant = 1.380649E-23 #m^2 kg/s^2 K
 def PengRobinson(compoundData, moleFractions, T, P):
     #Calculate "b" value for each pure substance and add to weighted and unweighted lists
     bmix = 0
-    b = [0]*len(compounds)
-    for i in range(len(compounds)):    
+    b = [0]*len(moleFractions)
+    for i in range(len(moleFractions)):    
         Tc = compoundData[i][2]
         Pc = compoundData[i][3]*1E6
         b[i] = 0.07780*(R*Tc/Pc)
         bmix += b[i]*moleFractions[i]
         
     #Calculate the "a" values for all pure compounds
-    a = [0]*len(compounds)
-    for i in range(len(compounds)):
+    a = [0]*len(moleFractions)
+    for i in range(len(moleFractions)):
         Tc = compoundData[i][2]
         Pc = compoundData[i][3]*1E6
         omega = compoundData[i][4]
@@ -43,16 +43,16 @@ def PengRobinson(compoundData, moleFractions, T, P):
         a[i] = 0.45724*((R**2)*(Tc**2)/Pc)*alpha
         
     #Obtain the interaction parameters for all combinations of compounds
-    interactionParameters = [[0 for i in range(len(compounds))] for j in range(len(compounds))]
-    for i in range(len(compounds)):
-        for j in range(len(compounds)):
+    interactionParameters = [[0 for i in range(len(moleFractions))] for j in range(len(moleFractions))]
+    for i in range(len(moleFractions)):
+        for j in range(len(moleFractions)):
             interactionParameters[i][j] = mixConstants.loc[(mixConstants['Compound 1'] == compoundData[i][1]), (compoundData[j][1])].reset_index(drop=True)[0]
         
     #Finally, determine the partial "a" values based on mole ratios
     amix = 0
-    xia = [0 for i in range(len(compounds))]
-    for i in range(len(compounds)):
-        for j in range(len(compounds)):
+    xia = [0 for i in range(len(moleFractions))]
+    for i in range(len(moleFractions)):
+        for j in range(len(moleFractions)):
             amix += (math.sqrt(a[i]*a[j]))*(1-interactionParameters[i][j])*moleFractions[i]*moleFractions[j]
             xia[i] += (math.sqrt(a[i]*a[j]))*(1-interactionParameters[i][j])*moleFractions[j]
             
@@ -80,11 +80,11 @@ def PengRobinson(compoundData, moleFractions, T, P):
     VmVap = (ZVmix*R*T/P)
     VmLiq = (ZLmix*R*T/P)
     
-    fugVap = [0 for i in range(len(compounds))]
+    fugVap = [0 for i in range(len(moleFractions))]
     #fugLiq = [0 for i in range(len(compounds))]
     
     #Calculate fugacities for each of the compounds
-    for i in range(len(compounds)):
+    for i in range(len(moleFractions)):
         fugVap[i] = P*moleFractions[i]*math.exp((b[i]/bmix)*(ZVmix-1)-math.log(ZVmix-B)-(A/(2*math.sqrt(2)*B))*(2*xia[i]/amix-b[i]/bmix)*math.log((ZVmix+(1+math.sqrt(2))*B)/(ZVmix+(1-math.sqrt(2))*B)))
         #fugLiq[i] = P*moleFractions[i]*math.exp((b[i]/bmix)*(ZLmix-1)-math.log(ZLmix-B)-(A/(2*math.sqrt(2)*B))*(2*xia[i]/amix-b[i]/bmix)*math.log((ZLmix+(1+math.sqrt(2))*B)/(ZLmix+(1-math.sqrt(2))*B)))
         
@@ -124,8 +124,9 @@ def Lang_Const(T, cellRadii, a, RCell, z, epsilon, sigma):
 #Equation 3 #TODO: FIX THIS
 def frac(T, kiharaParameters, cellProperties, vaporFugacityCoeffs):
     fractions = [[0 for i in range(len(vaporFugacityCoeffs))], [0 for i in range(len(vaporFugacityCoeffs))]]
+    denominator = 0 #should this be reset for each cage?
     for i in range(2):
-        denominator = 0
+        
         #Hydrate Cell Properties
         cellRadii = [0, 0, 0]
         for j in range(3):
@@ -143,6 +144,7 @@ def frac(T, kiharaParameters, cellProperties, vaporFugacityCoeffs):
             a = kiharaParameters[j][4]/2*1E-10
             langConsts[j] = Lang_Const(T, cellRadii, a, RCell, z, epsilon, sigma)
             denominator += langConsts[j]*vaporFugacityCoeffs[j]
+            
         for j in range(len(vaporFugacityCoeffs)):    
             fractions[i][j] = langConsts[j]*vaporFugacityCoeffs[j]/(1 + denominator)
     
@@ -151,13 +153,12 @@ def frac(T, kiharaParameters, cellProperties, vaporFugacityCoeffs):
 #Equation 2 (DONE)
 def deltaHydratePotential(T, kiharaParameters, structure, vaporFugacityCoeffs):
     cellProperties = getHydrateCellProperties(structure)
-    nu = cellProperties[0][10]
     fractions = 0
     Deltamu_H_w = 0
     
     fractions = frac(T, kiharaParameters, cellProperties, vaporFugacityCoeffs)
-    Deltamu_H_w += -1*R*T*(1/nu)*math.log(1-sum(fractions[0]))     
-    Deltamu_H_w += -1*R*T*(1/nu)*math.log(1-sum(fractions[1]))
+    Deltamu_H_w += -1*R*T*(cellProperties[0][10])*math.log(1-sum(fractions[0]))
+    Deltamu_H_w += -1*R*T*(cellProperties[1][10])*math.log(1-sum(fractions[1]))
     return Deltamu_H_w
 
 #Equation 18 (DONE)
@@ -167,12 +168,11 @@ def henrysLawConst(compound, T):
     H_i = 101325*math.exp(-1*(constants[2] + constants[3]/T + constants[4]*math.log(T) + constants[5]*T))
     return H_i
 
-#Equation 17
-def liqPhaseComposition(compounds, T, fug_vap):
-    Z_inf = 0
+#Equation 17 (DONE)
+def liqPhaseComposition(compounds, T, fug_vap, Vi, P, Psat):
     x = [0 for i in range(len(compounds)+1)]
     for i in range(len(fug_vap)):
-        x[i+1] = fug_vap[i]/(henrysLawConst(compounds[i], T)*math.exp(Z_inf))
+        x[i+1] = fug_vap[i]/(henrysLawConst(compounds[i], T)*math.exp(Vi[i]*(P-Psat)/(R*T)))
     x[0] = 1-sum(x) #Water composition
     return x
 
@@ -185,7 +185,7 @@ def activityCoeff():
     return 1
 
 #Equations 15 and 16
-def waterFugacity(T, P, phase, fug_vap, compounds):
+def waterFugacity(T, P, phase, fug_vap, compounds, Vi):
     if phase == "ice":
         Vm_water = 1.912E-5 + T*8.387E-10 + (T**2)*4.016E-12
         Psat_water = math.exp(4.6056*math.log(T)-5501.1243/T+2.9446-T*8.1431E-3)
@@ -193,7 +193,7 @@ def waterFugacity(T, P, phase, fug_vap, compounds):
     elif phase == "liquid":
         Vm_water = math.exp(-10.921 + 2.5E-4*(T-273.15) - 3.532E-4*(P/1E6-0.101325) + 1.559E-7*((P/1E6-.101325)**2))
         Psat_water = math.exp(4.1539*math.log(T)-5500.9332/T+7.6537-16.1277E-3*T)
-        f_w = liqPhaseComposition(compounds, T, fug_vap)[0]*activityCoeff()*Psat_water*math.exp(Vm_water*(P-Psat_water)/(R*T))
+        f_w = liqPhaseComposition(compounds, T, fug_vap, Vi, P, Psat_water)[0]*activityCoeff()*Psat_water*math.exp(Vm_water*(P-Psat_water)/(R*T))
     return f_w
 
 #Equation A2
@@ -236,7 +236,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
     eosResult = PengRobinson(compoundData, moleFractions, temperature, pressure)
     vaporFugacities = eosResult[2]
         
-    f_w = waterFugacity(temperature, pressure, waterPhase, vaporFugacities, compounds)
+    f_w = waterFugacity(temperature, pressure, waterPhase, vaporFugacities, compounds, compoundData[:,6])
         
     f_h = hydrateFugacity(temperature, pressure, PvapConsts, structure, vaporFugacities, compounds, kiharaParameters)
 
@@ -244,7 +244,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
         pGuess = pGuess*(f_h/f_w)
         
         vaporFugacities = PengRobinson(compoundData, moleFractions, temperature, pGuess)[2]
-        f_w = waterFugacity(temperature, pGuess, waterPhase, vaporFugacities, compounds)
+        f_w = waterFugacity(temperature, pGuess, waterPhase, vaporFugacities, compounds, compoundData[:,6])
         f_h = hydrateFugacity(temperature, pGuess, PvapConsts, structure, vaporFugacities, compounds, kiharaParameters)
 
     SIEqPressure = pGuess
@@ -255,7 +255,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
     eosResult = PengRobinson(compoundData, moleFractions, temperature, pressure)
     vaporFugacities = eosResult[2]
         
-    f_w = waterFugacity(temperature, pressure, waterPhase, vaporFugacities, compounds)
+    f_w = waterFugacity(temperature, pressure, waterPhase, vaporFugacities, compounds, compoundData[:,6])
         
     f_h = hydrateFugacity(temperature, pressure, PvapConsts, structure, vaporFugacities, compounds, kiharaParameters)
 
@@ -263,7 +263,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
         pGuess = pGuess*(f_h/f_w)
             
         vaporFugacities = PengRobinson(compoundData, moleFractions, temperature, pGuess)[2]
-        f_w = waterFugacity(temperature, pGuess, waterPhase, vaporFugacities, compounds)
+        f_w = waterFugacity(temperature, pGuess, waterPhase, vaporFugacities, compounds, compoundData[:,6])
         f_h = hydrateFugacity(temperature, pGuess, PvapConsts, structure, vaporFugacities, compounds, kiharaParameters)
 
     SIIEqPressure = pGuess
