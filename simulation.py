@@ -5,8 +5,6 @@ import pandas
 import scipy
 import warnings
 
-warnings.filterwarnings('ignore')
-
 #Extract data from excel files
 fluidProperties = pandas.read_excel('Data.xlsx', sheet_name='Fluid Properties')
 hydrateCellProperties = pandas.read_excel('Data.xlsx', sheet_name='Hydrate Cell Properties')
@@ -100,7 +98,7 @@ def delta(N, r, RCell, a):
     delta = ((1-r/RCell-a/RCell)**(-1*N)-(1+r/RCell-a/RCell)**(-1*N))/N
     return delta 
    
-#Equation 6 (DONE)
+#Equation 6 
 def W(r, RCell, z, epsilon, sigma, a):
     d10 = delta(10, r, RCell, a)
     d11 = delta(11, r, RCell, a)
@@ -109,24 +107,23 @@ def W(r, RCell, z, epsilon, sigma, a):
     W = 2*z*epsilon*((sigma**12)/(r*RCell**11)*(d10+a/RCell*d11)-sigma**6/(r*RCell**5)*(d4+a/RCell*d5))
     return W  
    
-#Equation 4 (DONE)
+#Equation 4 
 def Lang_Const(T, cellRadii, a, RCell, z, epsilon, sigma):
     def integrand(r):
         W1 = W(r, cellRadii[0], z[0], epsilon, sigma, a)
         W2 = W(r, cellRadii[1], z[1], epsilon, sigma, a)
         W3 = W(r, cellRadii[2], z[2], epsilon, sigma, a)
-        x = math.exp(-1*(W1+W2+W3)/T)*r**2
+        x = math.exp(-1*(W1+W2+W3)/T)*(r**2)
         return x
     
-    Cml = 4*math.pi/(boltzmannConstant*T)*(scipy.integrate.quad(integrand, 0, RCell-2*a)[0])
+    Cml = 4*math.pi/(boltzmannConstant*T)*(scipy.integrate.quad(integrand, 0, RCell-a)[0])
     return Cml
 
-#Equation 3 #TODO: FIX THIS
-def frac(T, kiharaParameters, cellProperties, vaporFugacityCoeffs):
-    fractions = [[0 for i in range(len(vaporFugacityCoeffs))], [0 for i in range(len(vaporFugacityCoeffs))]]
-    denominator = 0 #should this be reset for each cage?
+#Equation 3 (DONE)
+def frac(T, kiharaParameters, cellProperties, vaporFugacities):
+    fractions = [[0 for i in range(len(vaporFugacities))], [0 for i in range(len(vaporFugacities))]]
     for i in range(2):
-        
+        denominator = 0
         #Hydrate Cell Properties
         cellRadii = [0, 0, 0]
         for j in range(3):
@@ -136,17 +133,17 @@ def frac(T, kiharaParameters, cellProperties, vaporFugacityCoeffs):
             z[j] = cellProperties[i][5+j]
         RCell = cellProperties[i][8]*1E-10
                
-        langConsts = [0 for j in range(len(vaporFugacityCoeffs))]
-        for j in range(len(vaporFugacityCoeffs)):
+        langConsts = [0 for j in range(len(vaporFugacities))]
+        for j in range(len(vaporFugacities)):
             #Kihara Cell Parameters
             epsilon = math.sqrt(102.134*kiharaParameters[j][2])
             sigma = (kiharaParameters[j][3]+ 3.56438)/2*1E-10
             a = kiharaParameters[j][4]/2*1E-10
             langConsts[j] = Lang_Const(T, cellRadii, a, RCell, z, epsilon, sigma)
-            denominator += langConsts[j]*vaporFugacityCoeffs[j]
+            denominator += langConsts[j]*vaporFugacities[j]
             
-        for j in range(len(vaporFugacityCoeffs)):    
-            fractions[i][j] = langConsts[j]*vaporFugacityCoeffs[j]/(1 + denominator)
+        for j in range(len(vaporFugacities)):    
+            fractions[i][j] = langConsts[j]*vaporFugacities[j]/(1 + denominator)
     
     return fractions
 
@@ -204,9 +201,9 @@ def hydrateFugacity(T, P, PvapConsts, structure, fug_vap, compounds, kiharaParam
         #Vm_water = (11.835+2.217E-5*T+2.242E-6*T**2)**3*(1E-30*N_A/46)
     elif structure == "II":
         Vm_water = (17.13+2.249E-4*T+2.013E-6*T**2+1.009E-9*T**3)*(1E-30*N_A/136)-8.006E-9*P/1E6+5.448E-12*(P/1E6)**2
-    A = PvapConsts[0][3]
-    B = PvapConsts[0][4] #Figure out how this works with mixing
-    D = PvapConsts[0][6]
+    A = min(PvapConsts[:,3])
+    B = min(PvapConsts[:,4]) #Use min value (maybe fix later)
+    D = min(PvapConsts[:,6])
     Psat_water = math.exp(A*math.log(T)+B/T+2.7789+D*T)
     f_h = Psat_water*math.exp(Vm_water*(P-Psat_water)/(R*T))*math.exp(-1*deltaHydratePotential(T, kiharaParameters, structure, fug_vap)/(R*T))
     return f_h
@@ -269,3 +266,31 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
     SIIEqPressure = pGuess
     
     return min(SIEqPressure, SIIEqPressure)
+    
+#Runtime-----------------------------------------------------------------------
+minTemp = float(input("Lower Temperature (K): ")) #Temp in K
+maxTemp = float(input("Upper Temperature (K): "))
+pressure = float(input("Pressure (MPa): "))*1E6 #Pressure in Pa
+numberOfCompounds = int(input("No. of Compounds Excluding Water: "))
+compounds = []
+moleFractions = []
+print("\n 1. Methane      2. Ethane\n 3. Propane      4. i-Butane\n 5. c-C3H6       6. H2S\n 7. Nitrogen     8. CO2\n")
+for i in range(numberOfCompounds):
+    compounds += [int(input("Compound ID " + str(i + 1) + " : "))]
+    if numberOfCompounds > 1:
+        moleFractions += [float(input("Mole Fraction of Compound " + str(i + 1) + " : "))]
+    else:
+        moleFractions = [1]
+noPoints = int(input("Number of Data Points: "))
+
+T = numpy.arange(minTemp, maxTemp+(maxTemp-minTemp)/noPoints, (maxTemp-minTemp)/(noPoints-1))
+eqPressure = [0 for i in range(len(T))]
+for i in range(len(T)):
+    eqPressure[i] = equilibriumPressure(T[i], pressure, compounds, moleFractions)/1E6 #In MPa
+
+plt.plot(T, eqPressure, '-ok')
+plt.yscale("log")
+plt.title("Equilibrium Predictions")
+plt.xlabel("Temperature (K)")
+plt.ylabel("Pressure (MPa)")
+plt.show
