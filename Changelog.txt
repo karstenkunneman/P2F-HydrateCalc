@@ -1,8 +1,6 @@
-1. Using scipy.optimization.fsolve() to search for equilibrium pressure, with significant (4.4x w/ CH4) speed increase
-2. Simulation will now attempt to find an equilibrium pressure for both structures, but will return infinity if calculation does not converge
-3. Simulation now records and returns the hydrate structure at each equilibrium point
-4. Simulation now records and returns the hydrate occupancy at each equilibrium point for each shell and guest
-5. If guest has parameters for both SI and SII hydrates, simulation will calculate with parameters based on structure
-6. Cyclopropane will now converge properly
-7. Webapp now accepts csv temperature and guess pressure files, as well as providing a template
-8. Webapp now returns the equilibrium structure and occupancies of the hydrate shells
+1. Separated commandline and functoins into separate files; renamed simulation.py to simFunctions.py
+2. Improvements made to Data.xlsx formatting and sourcing
+3. Fixed kappa1 parameter for isobutane
+4. Altered the vapor pressure constants, improving accuracy for most calculations
+5. Commandline program now assumes last mole fraction based on other mole fractions
+6. Webapp no longer prompts user for mole fraction in single-component system (assuming 1)

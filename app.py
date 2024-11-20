@@ -1,4 +1,4 @@
-import simulation
+import simFunctions
 import streamlit as st
 import pandas as pd
 import numpy
@@ -8,7 +8,7 @@ import time
 componentList = ['1. Methane', '2. Ethane', '3. Propane', '4. Isobutane', '5. Cyclopropane', '6. Hydrogen Sulfide', '7. Nitrogen', '8. Carbon Dioxide']
 
 st.title('Gas Hydrate Equilibrium Calculator')
-st.caption('Version 2024-10-31')
+st.caption('Version 2024-11-20')
 
 noComponents = st.number_input('Number of Components', 1, None, 1, 1)
 components = []
@@ -18,8 +18,11 @@ with c1:
     for i in range(noComponents):
         components += [int(st.selectbox('Component ' + str(i+1), componentList)[0])]
 with c2:
-    for i in range(noComponents):
-        moleFractions += [float(st.text_input('Component ' + str(i+1) + " Mole Fraction", 1.00))]
+    if noComponents > 1:
+        for i in range(noComponents):
+            moleFractions += [float(st.text_input('Component ' + str(i+1) + " Mole Fraction", 1.00))]
+    else:
+        moleFractions = 1
 
 csvGuesses = st.file_uploader("Upload Temperatures and Guess Pressures", ['csv'])
 csvTemplate = st.download_button("Guess File Template", open("Input Template.csv", encoding='utf-8'), file_name="Input Template.csv")
@@ -55,7 +58,7 @@ if st.button("Calculate"):
         eqStructure = [0 for i in range(len(T))]
         eqFractions = [0 for i in range(len(T))]
         for i in range(len(T)):
-            simResult = simulation.equilibriumPressure(T[i], P[i], components, moleFractions)
+            simResult = simFunctions.equilibriumPressure(T[i], P[i], components, moleFractions)
             eqPressure[i] = simResult[0]/1E6 #In MPa
             eqStructure[i] = simResult[1]
             eqFractions[i] = simResult[2]
@@ -67,7 +70,7 @@ if st.button("Calculate"):
         plt.ylabel("Pressure (MPa)")
         st.pyplot(fig)
     else:
-        simResult = simulation.equilibriumPressure(T[i], P[i], components, moleFractions)
+        simResult = simFunctions.equilibriumPressure(T[i], P[i], components, moleFractions)
         eqPressure = simResult[0]/1E6 #In MPa
         eqStructure = simResult[1]
         eqFractions = simResult[2]
@@ -84,5 +87,5 @@ st.markdown('''
             Compound data obtained from NIST  
             Equations used from "PRSV: An Improved Peng- Robinson Equation of State for Pure Compounds and Mixtures" by R. Stryjek and J. H. Vera  
             Binary interaction parameters obtained from "Vapor-liquid equilibria for mixtures of low boiling substances. Pt. 2. Ternary systems" by H. Knapp, S. Zeck, and R. Langhorst  
-            This site created with Streamlit
-            ''')
+            This site created with Streamlit''')
+st.markdown(f'''<a href="https://github.com/karstenkunneman/Gas-Hydrate-Equilibrium-Calculator">Github Repo</a>''', unsafe_allow_html=True)
