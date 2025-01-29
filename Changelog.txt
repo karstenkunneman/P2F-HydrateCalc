@@ -1,6 +1,8 @@
-1. Separated commandline and functoins into separate files; renamed simulation.py to simFunctions.py
-2. Improvements made to Data.xlsx formatting and sourcing
-3. Fixed kappa1 parameter for isobutane
-4. Altered the vapor pressure constants, improving accuracy for most calculations
-5. Commandline program now assumes last mole fraction based on other mole fractions
-6. Webapp no longer prompts user for mole fraction in single-component system (assuming 1)
+1. Fixed an issue where the commandline would crash if given multiple components
+2. Fixed an issue where the webapp would crash if given a single component
+3. Updated the Chemgroup of n-Butane
+4. Added calculation for the langmuir guest-guest interaction factor, significantly improving multicomponent calculations
+5. Updated some variables to better fit altered formulas
+6. Commandline program now reads from Data.xlsx to get IDs and Compounds instead of being hardwritten in code
+7. Commandline can now accept single guess temperature and pressure
+8. Replaced old langmuir constant calculation with faster constant-based solution

@@ -12,16 +12,24 @@ warnings.filterwarnings("ignore")
 #Extract data from excel files
 fluidProperties = pandas.read_excel('Data.xlsx', sheet_name='Fluid Properties')
 hydrateCellProperties = pandas.read_excel('Data.xlsx', sheet_name='Hydrate Cell Properties')
-kiharaCellParameters = pandas.read_excel('Data.xlsx', sheet_name='Kihara Cell Parameters')
+#kiharaCellParameters = pandas.read_excel('Data.xlsx', sheet_name='Kihara Cell Parameters')
 vaporPressureConstants = pandas.read_excel('Data.xlsx', sheet_name='Vapor Pressure Constants')
 mixConstants = pandas.read_excel('Data.xlsx', sheet_name='Binary Interaction Parameters')
 
 #Constants
-errorMargin = 1E-9
+errorMargin = 1E-5
 R = 8.31446261815324 #m^3 Pa/mol K
 boltzmannConstant = 1.380649E-23 #m^2 kg/s^2 K
 
-#PRSV Equation of State (DONE)
+def getComponents():
+    IDs = fluidProperties["Compound ID"].tolist()
+    del IDs[0]
+    compounds = fluidProperties["Formula"].tolist()
+    del compounds[0]
+    
+    return IDs, compounds
+
+#PRSV Equation of State
 def PengRobinson(compoundData, moleFractions, T, P):
     #Calculate "b" value for each pure substance and add to weighted and unweighted lists
     bmix = 0
@@ -89,20 +97,18 @@ def PengRobinson(compoundData, moleFractions, T, P):
     for i in range(len(moleFractions)):
         fugVap[i] = P*moleFractions[i]*math.exp((b[i]/bmix)*(ZVmix-1)-math.log(ZVmix-B)-(A/(2*math.sqrt(2)*B))*(2*xia[i]/amix-b[i]/bmix)*math.log((ZVmix+(1+math.sqrt(2))*B)/(ZVmix+(1-math.sqrt(2))*B)))
         #fugLiq[i] = P*moleFractions[i]*math.exp((b[i]/bmix)*(ZLmix-1)-math.log(ZLmix-B)-(A/(2*math.sqrt(2)*B))*(2*xia[i]/amix-b[i]/bmix)*math.log((ZLmix+(1+math.sqrt(2))*B)/(ZLmix+(1-math.sqrt(2))*B)))
-        
+       
     return VmVap, VmLiq, fugVap, ZVmix
 
-#For a given hydrate structure, return its radii and coordination numbers (DONE)
+#For a given hydrate structure, return its radii and coordination numbers
 def getHydrateCellProperties(structure):
     cellProperties = numpy.array(hydrateCellProperties.loc[(hydrateCellProperties['Structure'] == structure)])
     return cellProperties
    
-#Equation 7
 def delta(N, r, RCell, a):
     delta = ((1-r/RCell-a/RCell)**(-1*N)-(1+r/RCell-a/RCell)**(-1*N))/N
     return delta 
    
-#Equation 6
 def W(r, RCell, z, epsilon, sigma, a):
     d10 = delta(10, r, RCell, a)
     d11 = delta(11, r, RCell, a)
@@ -110,54 +116,132 @@ def W(r, RCell, z, epsilon, sigma, a):
     d5 = delta(5, r, RCell, a)
     W = 2*z*epsilon*((sigma**12)/(r*RCell**11)*(d10+a/RCell*d11)-sigma**6/(r*RCell**5)*(d4+a/RCell*d5))
     return W  
-   
-#Equation 4
-def Lang_Const(T, cellRadii, a, RCell, z, epsilon, sigma):
-    def integrand(r):
+
+#Calculates Langmuir Constant Cml
+def Lang_Const(T, cellRadii, a, RCell, z, epsilon, sigma, structure, shell, compound):
+    '''def integrand(r):
         W1 = W(r, cellRadii[0], z[0], epsilon, sigma, a)
         W2 = W(1E-14, cellRadii[1], z[1], epsilon, sigma, a)
         W3 = W(1E-14, cellRadii[2], z[2], epsilon, sigma, a)
         x = math.exp(-1*(W1+W2+W3)/T)*(r**2)
         return x
     
-    Cml = 4*math.pi/(boltzmannConstant*T)*(scipy.integrate.quad(integrand, 0, RCell-a)[0])
+    Cml = 4*math.pi/(boltzmannConstant*T)*(scipy.integrate.quad(integrand, 0, RCell-a)[0])'''
+    
+    langParameters = pandas.read_excel('Data.xlsx', sheet_name='Langmuir Parameters')
+    
+    condition = (langParameters['Structure'] == structure) & \
+        (langParameters['Shell'] == shell) & \
+        (langParameters['Guest'] == compound)
+    
+    Ac = langParameters.loc[condition, "Ac"].values[0]
+    Bc = langParameters.loc[condition, "Bc"].values[0]
+    Dc = langParameters.loc[condition, "Dc"].values[0]
+    
+    Cml = math.exp(Ac + Bc/T + Dc/T/T)
+    
     return Cml
 
-#Equation 3
-def frac(T, kiharaParameters, cellProperties, vaporFugacities):
-    fractions = [[0 for i in range(len(vaporFugacities))],[0 for i in range(len(vaporFugacities))]]
-    for i in range(2):
-        denominator = 0
-        #Hydrate Cell Properties
-        cellRadii = [0, 0, 0]
-        for j in range(3):
-            cellRadii[j] = cellProperties[i][2+j]*1E-10
-        z = [0, 0, 0]
-        for j in range(3):
-            z[j] = cellProperties[i][5+j]
-        RCell = cellProperties[i][8]*1E-10
-               
-        langConsts = [0 for j in range(len(vaporFugacities))]
-        for j in range(len(vaporFugacities)):
-            #Kihara Cell Parameters
-            epsilon = math.sqrt(102.134*kiharaParameters[j][2])
-            sigma = (kiharaParameters[j][3]+ 3.56438)/2*1E-10
-            a = kiharaParameters[j][4]/2*1E-10
-            langConsts[j] = Lang_Const(T, cellRadii, a, RCell, z, epsilon, sigma)
-            denominator += langConsts[j]*vaporFugacities[j]
-            
-        for j in range(len(vaporFugacities)):    
-            fractions[i][j] = langConsts[j]*vaporFugacities[j]/(1 + denominator)
+#Calculates Langmuir Guest-Guest Parameter Cgg
+def Lang_GG_Const(T, compoundData, fracs, structure):
+    I = compoundData[:,8]#eV
+    alpha = compoundData[:,9]#angstrom^3
+    Cgg = [[1,1] for i in range(len(I))]
     
-    return fractions
+    C6 = [[0 for i in range(len(I))] for i in range(len(I))]
+    C8 = [[0 for i in range(len(I))] for i in range(len(I))]
+    C10 = [[0 for i in range(len(I))] for i in range(len(I))]
+            
+    for i in range(len(I)):
+        for j in range(len(I)):
+            #C6[i][j] = (3/2)*alpha[i]*alpha[j]*I[i]*I[j]/(I[i]+I[j])*boltzmannConstant*1.60218e-19
+            #C8[i][j] = 38.10/I[i]*C6[i][j]
+            #C10[i][j] = 762.1/I[i]/I[i]*C6[i][j]
+            C6[i][j] = (3/2)*alpha[i]*alpha[j]*I[i]*I[j]/(I[i]+I[j])*23.05/.001987
+            C8[i][j] = 496778.3824*alpha[i]*alpha[j]*(I[i]/(2*I[i]+I[j])+I[j]/(2*I[j]+I[i]))
+            C10[i][j] = 13260598.42*alpha[i]*alpha[j]/(I[i]+I[j])
+    
+    integrationConstants = pandas.read_excel('Data.xlsx', sheet_name='A_int')
+    
+    wrgg = [[[[0,0],[0,0]] for i in range(len(I))] for i in range(len(I))]
+    
+    #Unsure exactly what these are relative to r
+    if structure == "I":
+        a_lc = 12.03
+    elif structure == "II":
+        a_lc = 17.31
+        
+    def Aij(i, j, k, l):
+        condition = (integrationConstants['Structure'] == i) & \
+            (integrationConstants['Center Cage'] == j) & \
+            (integrationConstants['Parameter'] == k) & \
+            (integrationConstants['Like/Dislike'] == l)
+        Aij = integrationConstants.loc[condition, "A"].values[0]
+        return Aij
+        
+    for i in range(len(I)):
+        for j in range(len(I)):
+            for k in range(2):
+                r0 = a_lc*Aij(structure, k, 3, 0)
+                wrgg[i][j][k][0] = -1*C6[i][j]*Aij(structure, k, 0, 0)/(r0**6)-C8[i][j]*Aij(structure, k, 1, 0)/(r0**8)-C10[i][j]*Aij(structure, k, 2, 0)/(r0**10)
+                r1 = a_lc*Aij(structure, k, 3, 1)
+                wrgg[i][j][k][1] = -1*C6[i][j]*Aij(structure, k, 0, 1)/(r1**6)-C8[i][j]*Aij(structure, k, 1, 1)/(r1**8)-C10[i][j]*Aij(structure, k, 2, 1)/(r1**10)
+    
+    #Obtain the interaction energy of guest
+    for i in range(len(I)):
+        for j in range(len(I)):
+            for k in range(2):
+                Cgg[i][k] *= math.exp(-1*(wrgg[i][j][k][0]*fracs[0][j])/T)*math.exp(-1*(wrgg[i][j][k][1]*fracs[1][j])/T)
+    
+    return Cgg
+
+#Calculates the fractional occupancy of small and large shells by each component
+def frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compounds):
+    cellProperties = getHydrateCellProperties(structure) 
+    guessFractions = [[0 for i in range(len(vaporFugacities))],[0 for i in range(len(vaporFugacities))]]
+    oldGuessFractions = [[0 for i in range(len(vaporFugacities))],[0 for i in range(len(vaporFugacities))]]
+    Cgg = [[1, 1] for i in range(len(vaporFugacities))]
+    langConsts = [[None, None] for i in range(len(vaporFugacities))]
+    RCell = [0,0]
+    a = [0 for i in range(len(vaporFugacities))]
+    fracDiff = 0.5
+    while fracDiff >= errorMargin:
+        fracDiff = 0
+        for i in range(2):
+            denominator = 0
+            #Hydrate Cell Properties
+            cellRadii = [0, 0, 0]
+            for j in range(3):
+                cellRadii[j] = cellProperties[i][2+j]*1E-10
+            z = [0, 0, 0]
+            for j in range(3):
+                z[j] = cellProperties[i][5+j]
+            RCell[i] = cellProperties[i][8]*1E-10
+                   
+            for j in range(len(vaporFugacities)):
+                #Kihara Cell Parameters
+                epsilon = None #math.sqrt(102.134*kiharaParameters[j][2])
+                sigma = None #(kiharaParameters[j][3]+ 3.56438)/2*1E-10
+                a[j] = None #kiharaParameters[j][4]/2*1E-10
+                langConsts[j][i] = Lang_Const(T, cellRadii, a[j], RCell[i], z, epsilon, sigma, structure, i, compounds[j])
+                denominator += Cgg[j][i]*langConsts[j][i]*vaporFugacities[j]
+                    
+            for j in range(len(vaporFugacities)):
+                guessFractions[i][j] = Cgg[j][i]*langConsts[j][i]*vaporFugacities[j]/(1 + denominator)
+                fracDiff += abs(oldGuessFractions[i][j]-guessFractions[i][j])
+                oldGuessFractions[i][j]=guessFractions[i][j]
+            
+        Cgg = Lang_GG_Const(T, compoundData, guessFractions, structure)
+
+    return guessFractions
 
 #Equation 2
-def deltaHydratePotential(T, kiharaParameters, structure, vaporFugacityCoeffs):
+def deltaHydratePotential(T, kiharaParameters, structure, vaporFugacities, compoundData, compounds):
     cellProperties = getHydrateCellProperties(structure) 
     fractions = 0
     Deltamu_H_w = 0
     
-    fractions = frac(T, kiharaParameters, cellProperties, vaporFugacityCoeffs)
+    fractions = frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compounds)
     
     Deltamu_H_w += cellProperties[0][10]*math.log(1-sum(fractions[0]))
     Deltamu_H_w += cellProperties[1][10]*math.log(1-sum(fractions[1]))
@@ -224,23 +308,38 @@ def waterFugacity(T, P, phase, fug_vap, compounds, compoundData):
     return f_w
 
 #Equation A2
-def hydrateFugacity(T, P, PvapConsts, structure, fug_vap, compounds, kiharaParameters, moleFractions):
+def hydrateFugacity(T, P, PvapConsts, structure, fug_vap, compounds, kiharaParameters, compoundData):
+    cellProperties = getHydrateCellProperties(structure) 
     N_A = 6.022E23
     if structure == "I":
         Vm_water = (11.835+2.217E-5*T+2.242E-6*T**2)**3*(1E-30*N_A/46)-8.006E-9*P/1E6+5.448E-12*(P/1E6)**2
     elif structure == "II":
         Vm_water = (17.13+2.249E-4*T+2.013E-6*T**2-1.009E-9*T**3)**3*(1E-30*N_A/136)-8.006E-9*P/1E6+5.448E-12*(P/1E6)**2
+    
+    dH = deltaHydratePotential(T, kiharaParameters, structure, fug_vap, compoundData, compounds)
+    frac = dH[1]
+    
     A = 0
     B = 0
     D = 0
+    
+    denominator = 0
     for i in range(len(compounds)):
-        A += PvapConsts[i,3]*moleFractions[i]
-        B += PvapConsts[i,4]*moleFractions[i]
-        D += PvapConsts[i,6]*moleFractions[i]
+        denominator += frac[0][i]*cellProperties[0][10]
+        denominator += frac[1][i]*cellProperties[1][10]
+            
+    Z = [0 for i in range(len(compounds))]
+    for i in range(len(compounds)):
+        for j in range(2):
+            Z[i] += (frac[j][i]*cellProperties[j][10])/denominator
+            
+    for i in range(len(compounds)):
+        A += PvapConsts[i,3]*Z[i]
+        B += PvapConsts[i,4]*Z[i]
+        D += PvapConsts[i,6]*Z[i]
     
     Psat_water = math.exp(A*math.log(T)+B/T+2.7789+D*T)
-    dH = deltaHydratePotential(T, kiharaParameters, structure, fug_vap)
-    frac = dH[1]
+    
     f_h = Psat_water*math.exp(Vm_water*(P-Psat_water)/(R*T))*math.exp(dH[0])
     return f_h,frac
 
@@ -253,9 +352,10 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
     for i in range(len(compounds)-1):
         PvapConsts = numpy.append(PvapConsts, vaporPressureConstants.loc[vaporPressureConstants['Compound ID'] == compounds[i+1]], axis = 0)
 
-    kiharaParameters = numpy.array(kiharaCellParameters.loc[kiharaCellParameters['Compound ID'] == compounds[0]])
-    for i in range(len(compounds)-1):
-        kiharaParameters = numpy.append(kiharaParameters, kiharaCellParameters.loc[kiharaCellParameters['Compound ID'] == compounds[i+1]], axis = 0)
+    #kiharaParameters = numpy.array(kiharaCellParameters.loc[kiharaCellParameters['Compound ID'] == compounds[0]])
+    #for i in range(len(compounds)-1):
+    #    kiharaParameters = numpy.append(kiharaParameters, kiharaCellParameters.loc[kiharaCellParameters['Compound ID'] == compounds[i+1]], axis = 0)
+    kiharaParameters = None
 
     #Computational Algorithm
     pGuess = pressure
@@ -271,11 +371,11 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
         waterPhase = "liquid"
     
     def f(pressure):
-        vaporFugacities = PengRobinson(compoundData, moleFractions, temperature, pressure)[2]
+        vaporFugacities = PengRobinson(compoundData, moleFractions, temperature, abs(pressure))[2]
         f_w = waterFugacity(temperature, pressure, waterPhase, vaporFugacities, compounds, compoundData)
-        f_h = hydrateFugacity(temperature, pressure, localPvapConsts, structure, vaporFugacities, compounds, kiharaParameters, moleFractions)[0]
-        return abs(f_h/f_w-1)
-        
+        f_h = hydrateFugacity(temperature, pressure, localPvapConsts, structure, vaporFugacities, compounds, kiharaParameters, compoundData)[0]
+        return abs(f_h-f_w)
+      
     structure = "I"
     pGuess = pressure
     mask = [0 for i in range(len(PvapConsts[:,0]))]
@@ -292,7 +392,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
     try:
         if "I" in PvapConsts[:,0]:
             SIEqPressure = abs(scipy.optimize.fsolve(f,pGuess,xtol=errorMargin)[0])
-            SIEqFrac = hydrateFugacity(temperature, SIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, moleFractions)[1]
+            SIEqFrac = hydrateFugacity(temperature, SIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, compoundData)[1]
         else:
             raise
     except:
@@ -316,7 +416,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
     try:
         if "II" in PvapConsts[:,0]:
             SIIEqPressure = abs(scipy.optimize.fsolve(f,[pGuess],xtol=errorMargin)[0])
-            SIIEqFrac = hydrateFugacity(temperature, SIIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, moleFractions)[1]
+            SIIEqFrac = hydrateFugacity(temperature, SIIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, compoundData)[1]
         else:
             raise
     except:
@@ -329,5 +429,5 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions):
     else:
         eqStructure = "II"
         EqFrac = SIIEqFrac
-    
+
     return min(SIEqPressure, SIIEqPressure), eqStructure, EqFrac

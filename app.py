@@ -22,7 +22,7 @@ with c2:
         for i in range(noComponents):
             moleFractions += [float(st.text_input('Component ' + str(i+1) + " Mole Fraction", 1.00))]
     else:
-        moleFractions = 1
+        moleFractions = [1]
 
 csvGuesses = st.file_uploader("Upload Temperatures and Guess Pressures", ['csv'])
 csvTemplate = st.download_button("Guess File Template", open("Input Template.csv", encoding='utf-8'), file_name="Input Template.csv")
