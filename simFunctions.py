@@ -15,9 +15,11 @@ hydrateCellProperties = pandas.read_excel('Data.xlsx', sheet_name='Hydrate Cell 
 #kiharaCellParameters = pandas.read_excel('Data.xlsx', sheet_name='Kihara Cell Parameters')
 vaporPressureConstants = pandas.read_excel('Data.xlsx', sheet_name='Vapor Pressure Constants')
 mixConstants = pandas.read_excel('Data.xlsx', sheet_name='Binary Interaction Parameters')
+saltData = pandas.read_excel('Data.xlsx', sheet_name='Salts Data').to_numpy()
+inhibitorData = pandas.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
 #Constants
-errorMargin = 1E-5
+errorMargin = 1E-9
 R = 8.31446261815324 #m^3 Pa/mol K
 boltzmannConstant = 1.380649E-23 #m^2 kg/s^2 K
 
@@ -205,7 +207,7 @@ def frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compound
     RCell = [0,0]
     a = [0 for i in range(len(vaporFugacities))]
     fracDiff = 0.5
-    while fracDiff >= errorMargin:
+    while abs(fracDiff) >= 1E-4:
         fracDiff = 0
         for i in range(2):
             denominator = 0
@@ -223,12 +225,12 @@ def frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compound
                 epsilon = None #math.sqrt(102.134*kiharaParameters[j][2])
                 sigma = None #(kiharaParameters[j][3]+ 3.56438)/2*1E-10
                 a[j] = None #kiharaParameters[j][4]/2*1E-10
-                langConsts[j][i] = Lang_Const(T, cellRadii, a[j], RCell[i], z, epsilon, sigma, structure, i, compounds[j])
+                langConsts[j][i] = Lang_Const(T, cellRadii, a[j], RCell[i], z, epsilon, sigma, structure, i, compounds[j])*(1-fracDiff)
                 denominator += Cgg[j][i]*langConsts[j][i]*vaporFugacities[j]
                     
             for j in range(len(vaporFugacities)):
                 guessFractions[i][j] = Cgg[j][i]*langConsts[j][i]*vaporFugacities[j]/(1 + denominator)
-                fracDiff += abs(oldGuessFractions[i][j]-guessFractions[i][j])
+                fracDiff += oldGuessFractions[i][j]-guessFractions[i][j]
                 oldGuessFractions[i][j]=guessFractions[i][j]
             
         Cgg = Lang_GG_Const(T, compoundData, guessFractions, structure)
@@ -251,7 +253,7 @@ def deltaHydratePotential(T, kiharaParameters, structure, vaporFugacities, compo
 def henrysLawConst(compound, T):
     henrysLawConstants = pandas.read_excel('Data.xlsx', sheet_name='Henrys Law Parameters')
     constants = numpy.array(henrysLawConstants.loc[henrysLawConstants['Compound ID'] == compound])[0]
-    H_i = 101325*math.exp(-1*(constants[2] + constants[3]/T + constants[4]*math.log(T) + constants[5]*T))
+    H_i = 101325*math.exp(-1*(constants[2]/1.987 + constants[3]/T/1.987 + constants[4]*math.log(T)/1.987 + constants[5]*T/1.987))
     return H_i
 
 #Infinite Dilution Compressibility Factor
@@ -262,7 +264,7 @@ def Z(compoundData, T, P):
         localCompoundData = compoundData[i]
         localCompoundData = numpy.column_stack((localCompoundData, waterData))
         localCompoundData = localCompoundData.transpose()
-        Z[i] = PengRobinson(localCompoundData, [0.00001, 0.99999], T, P)[3]
+        Z[i] = PengRobinson(localCompoundData, [0.00001, 0.99999], 273.15, P)[3]
     return Z
 
 #Equation 17
@@ -342,6 +344,52 @@ def hydrateFugacity(T, P, PvapConsts, structure, fug_vap, compounds, kiharaParam
     
     f_h = Psat_water*math.exp(Vm_water*(P-Psat_water)/(R*T))*math.exp(dH[0])
     return f_h,frac
+
+def HuLeeSum(T, saltConcs, inhibitorConcs, PvapConsts, moleFractions):
+    betaGas = 0
+    for i in range(len(moleFractions)):
+        betaGas += PvapConsts[i]*moleFractions[i]
+    
+    catMols = [0 for i in range(len(saltConcs))]
+    anMols = [0 for i in range(len(saltConcs))]
+    catMolFracs = [0 for i in range(len(saltConcs))]
+    anMolFracs = [0 for i in range(len(saltConcs))]
+    for i in range(len(saltConcs)):
+        catMols[i] = saltConcs[i]/saltData[i][1]*saltData[i][4]
+        anMols[i] = saltConcs[i]/saltData[i][1]*saltData[i][5]
+    totalSaltMols = sum(catMols)+sum(anMols)
+    waterMols = (100-sum(saltConcs))/18.015
+    for i in range(len(saltConcs)):
+        catMolFracs[i] = saltData[i][2]*catMols[i]/(waterMols+totalSaltMols)
+        anMolFracs[i] = saltData[i][3]*anMols[i]/(waterMols+totalSaltMols)
+        
+    inhibitorMols = [0 for i in range(len(inhibitorConcs))]
+    inhibitorMolFracs = [0 for i in range(len(inhibitorConcs))]
+    for i in range(len(inhibitorConcs)):
+        inhibitorMols[i] = inhibitorConcs[i]/(1-0.01*inhibitorConcs[i])/inhibitorData[i][1]
+    totalMols = totalSaltMols + sum(inhibitorMols)
+    for i in range(len(inhibitorConcs)):
+        inhibitorMolFracs[i] = inhibitorMols[i]/totalMols
+
+    totalEffSaltMols = sum(catMolFracs) + sum(anMolFracs)
+    lnawSalts = -1.06152*totalEffSaltMols+3.25726*totalEffSaltMols*totalEffSaltMols-37.2263*totalEffSaltMols*totalEffSaltMols*totalEffSaltMols
+    lnawInhibitors = inhibitorMols = [0 for i in range(len(inhibitorConcs))]
+    for i in range(len(inhibitorConcs)):
+        lnawInhibitors[i] = inhibitorData[i][2]*inhibitorMolFracs[i]+inhibitorData[i][3]*inhibitorMolFracs[i]**2
+
+    Tinhibited = T/(1-betaGas*(lnawSalts+sum(lnawInhibitors))*T)
+    return Tinhibited
+
+def TCorrected(T, saltConcs, inhibitorConcs, betaGas):
+    Tinhibited = HuLeeSum(T, saltConcs, inhibitorConcs, betaGas)
+    Tcorrected = T+(T-Tinhibited)
+    diff = T-Tinhibited
+    while abs(Tinhibited-T)>0.04:
+        Tcorrected = Tcorrected+diff
+        Tinhibited = HuLeeSum(Tcorrected, saltConcs, inhibitorConcs, betaGas)
+        diff = T-Tinhibited
+        
+    return Tcorrected
 
 def equilibriumPressure(temperature, pressure, compounds, moleFractions):
     compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])

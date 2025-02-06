@@ -48,7 +48,7 @@ for i in range(numberOfCompounds):
             moleFractions.append(1-sum(moleFractions))
     else:
         moleFractions = [1]
-
+        
 print("Calculating...")
 startTime = time.time()
 eqPressure = numpy.array([0 for i in range(len(T))],dtype=float)

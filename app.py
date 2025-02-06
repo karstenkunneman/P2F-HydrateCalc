@@ -5,10 +5,13 @@ import numpy
 import matplotlib.pyplot as plt
 import time
 
-componentList = ['1. Methane', '2. Ethane', '3. Propane', '4. Isobutane', '5. Cyclopropane', '6. Hydrogen Sulfide', '7. Nitrogen', '8. Carbon Dioxide']
+IDs, compounds = simFunctions.getComponents()
+componentList = []
+for i in range(len(IDs)):
+    componentList.append(str(IDs[i]) + ". " + compounds[i])
 
 st.title('Gas Hydrate Equilibrium Calculator')
-st.caption('Version 2024-11-20')
+st.caption('Version 2025-02-06')
 
 noComponents = st.number_input('Number of Components', 1, None, 1, 1)
 components = []
@@ -83,9 +86,6 @@ if st.button("Calculate"):
 st.header('Credits')
 st.markdown('''
             Created by Karsten Kunneman and Dr. Amadeu K Sum at the Colorado School of Mines  
-            Based on "A Fugacity Model for Gas Hydrate Phase Equilibria" by Jeffery B. Klauda and Stanley I. Sandler  
-            Compound data obtained from NIST  
-            Equations used from "PRSV: An Improved Peng- Robinson Equation of State for Pure Compounds and Mixtures" by R. Stryjek and J. H. Vera  
-            Binary interaction parameters obtained from "Vapor-liquid equilibria for mixtures of low boiling substances. Pt. 2. Ternary systems" by H. Knapp, S. Zeck, and R. Langhorst  
+            Based on "A Fugacity Model for Gas Hydrate Phase Equilibria" by Jeffery B. Klauda and Stanley I. Sandler
             This site created with Streamlit''')
 st.markdown(f'''<a href="https://github.com/karstenkunneman/Gas-Hydrate-Equilibrium-Calculator">Github Repo</a>''', unsafe_allow_html=True)
