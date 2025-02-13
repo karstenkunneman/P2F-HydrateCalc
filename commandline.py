@@ -3,6 +3,7 @@ import numpy
 import time
 import matplotlib.pyplot as plt
 import math
+import csv
 
 usecsv = input("Import .csv file? (Y/N): ")
 if usecsv == "Y":
@@ -23,13 +24,16 @@ else:
     else:
         T = [float(input("Temperature (K): "))]
         P = [float(input("Guess Pressure (MPa): "))*1E6]
-    
+
+exportFileName = input("Export File Name (do not include .csv): ") + ".csv"
+
 numberOfCompounds = int(input("No. of Compounds Excluding Water: "))
 components = []
 moleFractions = []
 
 IDs, compounds = simFunctions.getComponents()
 
+#Prints and allows user to select from components present in data
 for i in range(math.ceil(len(IDs)/2)):
     try:
         if len(str(IDs[2*i]) + ". " + compounds[2*i]) < 7:
@@ -48,6 +52,20 @@ for i in range(numberOfCompounds):
             moleFractions.append(1-sum(moleFractions))
     else:
         moleFractions = [1]
+
+freshWater = input("Fresh Water? (Y/N): ")
+#Prints and allows user to select from salts present in data
+salts, inhibitors = simFunctions.getInhibitors()
+if freshWater != "Y":
+    saltConcs = [0 for i in range(len(salts))]
+    inhibitorConcs = [0 for i in range(len(inhibitors))]
+    for i in range(len(salts)):
+        saltConcs[i] = float(input("Concentration of " + salts[i]+ " (%): "))
+    for i in range(len(inhibitors)):
+        inhibitorConcs[i] = float(input("Concentration of " + inhibitors[i]+ " (%): "))
+else:
+    saltConcs = [0 for i in range(len(salts))]
+    inhibitorConcs = [0 for i in range(len(inhibitors))]
         
 print("Calculating...")
 startTime = time.time()
@@ -55,20 +73,20 @@ eqPressure = numpy.array([0 for i in range(len(T))],dtype=float)
 eqStructure = [0 for i in range(len(T))]
 
 for i in range(len(T)):
-    convergence = simFunctions.equilibriumPressure(T[i], P[i], components, moleFractions)
+    convergence = simFunctions.equilibriumPressure(T[i], P[i], components, moleFractions, saltConcs, inhibitorConcs)
     eqPressure[i] = convergence[0]/1E6 #In MPa
     eqStructure[i] = convergence[1]
     print("Temperature " + str(i + 1) + " convergence point reached with a Structure " + convergence[1] + " hydrate.")
     print("Occupancy: " + str(convergence[2]))
-
-plt.plot(T, eqPressure, '-ok')
-plt.yscale("log")
-plt.title("Equilibrium Predictions")
-plt.xlabel("Temperature (K)")
-plt.ylabel("Pressure (MPa)")
-plt.show
-
+    
 endTime = time.time()
 
 print("Time to Complete Calculation: " + str(round(endTime-startTime, 3)) + " seconds")
 print("per Data Point: " + str(round((endTime-startTime)/noPoints, 3)) + " seconds")
+
+with open(exportFileName, mode = 'w', newline='') as file:
+    data = [['T (K)', 'P (MPa)', 'Structure', 'Small Cage Occupancy', 'Large Cage Occupancy']]
+    for i in range(noPoints):
+        data.append([T[i], eqPressure[i], eqStructure[i], convergence[2][0], convergence[2][1]])
+    writer = csv.writer(file)
+    writer.writerows(data)

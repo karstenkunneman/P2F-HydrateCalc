@@ -1,5 +1,6 @@
-1. Improved the speed of guest-guest interaction parameter calculation, reducing calculation time in some cases by up to 50%
-2. Removed data for i-C4H10, C4H10, H2S, and c-C3H6, as no Langmuir relation constants exist for them
-3. Added logic to invert the Hu-Lee-Sum Td correlation
-4. Started work on a Langmuir Parameter generator
-5. Improved Henry's Law Coefficient Calculation
+1. Implemented HLS Correlation for non-fresh water in commandline and webapp
+2. Implemented Freezing Point Depression Correlation for non-fresh water
+3. Fixed an issue with N2 Equilibrium Point calculations, now calculates correctly
+4. Fixed an issue with webapp single-point equilibrium calculations
+5. Commandline program will now export equilbrium data to a .csv file
+6. Improved Propane Calculation

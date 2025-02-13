@@ -1,3 +1,5 @@
-import simFunctions
+import thermo
 
-print(str(simFunctions.TCorrected(275.47, [0,0,10,0,0,0,0,0,0], [0,0,0,0,0,0], 8.755E-4)))
+test = thermo.eos.PR(126.2, 3.394E6, 0.04, 285.63, 55E6)
+
+fug = test.Zc

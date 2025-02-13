@@ -7,15 +7,19 @@ from thermo.unifac import UNIFAC, PSRKSG, PSRKIP
 import ast
 
 R = 8.31446261815324
+errorMargin = 1E-9
 
 fluidProperties = pandas.read_excel('Data.xlsx', sheet_name='Fluid Properties')
 
 filename = input("Equilibrium Data File name: ")
-guessFile = numpy.genfromtxt(filename, delimiter=',', skip_header=1)
-temperatures = guessFile[:,0]
-pressures = guessFile[:,1]*1E6
-structures = guessFile[:,2]
+guessFile = pandas.read_csv(filename)
+temperatures = guessFile["T (K)"].tolist()
+pressures = guessFile["P (Mpa)"].tolist()
+for i in range(len(pressures)):
+    pressures[i]*=1E6
+structures = guessFile["Structure"].tolist()
 
+'''
 compoundData = [0, 0, float(input("Critical Temperature(K): ")),
                 float(input("Critical Pressure(MPa): ")),
                 float(input("Accentric Factor: ")),
@@ -32,12 +36,36 @@ pvapConsts = [float(input("1st Empty Hydrate Vapor Pressure Constant: ")),
      float(input("2nd Empty Hydrate Vapor Pressure Constant: ")),
      float(input("3rd Empty Hydrate Vapor Pressure Constant: ")),
      float(input("4th Empty Hydrate Vapor Pressure Constant: "))]
+'''
+
+#for Propane
+
+compoundData = [[3, "C3H8", float(369.8), float(4.246), float(0.152),
+                float(0.03136), 0,
+                numpy.array(['{1: 2, 2: 1}'], dtype=object),
+                float(0.95),
+                float(6.29)]]
+
+H = [-628.866,
+     31638.4,
+     88.0808,
+     0]
+pvapConsts = [4.707955084,
+     -5449.888687,
+     2.778907444,
+     -0.009232972]
 
 def Z(compoundData, T, P):
     waterData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == 0])[0]
     localCompoundData = compoundData
-    localCompoundData = numpy.column_stack((localCompoundData, waterData))
-    localCompoundData = localCompoundData.transpose()
+    localCompoundData = numpy.column_stack((localCompoundData[0], waterData))
+    localCompoundData = localCompoundData.transpose().tolist()
+    
+    localCompoundData[0][2] = float(localCompoundData[0][2])
+    localCompoundData[0][3] = float(localCompoundData[0][3])
+    localCompoundData[0][4] = float(localCompoundData[0][4])
+    localCompoundData[0][5] = float(localCompoundData[0][5])
+    
     Z = simFunctions.PengRobinson(localCompoundData, [0.00001, 0.99999], T, P)[3]
     return Z
 
@@ -68,10 +96,10 @@ def freezingPointDepression(T, fug_vap, compoundData, P, chemGroups):
     return deltadT
 
 def getLangConst(T, P, compoundData, structure):
-    fug_vap = simFunctions.PengRobinson(compoundData, [1], T, P)[2]
-    
+    fug_vap = simFunctions.PengRobinson(compoundData, [1], T, P)[2][0]
+
     if T > 260 and T < 280:
-        freezingPoint = 273.15+freezingPointDepression(T, fug_vap, compoundData, P, compoundData[:,7])
+        freezingPoint = 273.15+freezingPointDepression(T, fug_vap, compoundData, P, compoundData[0][7])
         if T > freezingPoint:
             phase = "liquid"
         else:
@@ -82,14 +110,12 @@ def getLangConst(T, P, compoundData, structure):
         phase = "liquid"
     
     #Water Fugacity Calculation
-    Psat_water = math.exp(A*math.log(T)+B/T+2.7789+D*T)
-    
     if phase == "ice":
         Vm_water = 1.912E-5 + T*8.387E-10 + (T**2)*4.016E-12
         Psat_water = math.exp(4.6056*math.log(T)-5501.1243/T+2.9446-T*8.1431E-3)
         f_w = Psat_water*math.exp(Vm_water*(P-Psat_water)/(R*T))
     elif phase == "liquid":
-        chemGroups = compoundData[:,7]
+        chemGroups = compoundData[0][7]
         Vm_water = math.exp(-10.921 + 2.5E-4*(T-273.15) - 3.532E-4*(P/1E6-0.101325) + 1.559E-7*((P/1E6-.101325)**2))
         Psat_water = math.exp(4.1539*math.log(T)-5500.9332/T+7.6537-16.1277E-3*T)
         phaseComposition = liqPhaseComposition(T, fug_vap, compoundData, P, Psat_water)
@@ -103,7 +129,7 @@ def getLangConst(T, P, compoundData, structure):
         Vm_hydrate = (17.13+2.249E-4*T+2.013E-6*T**2-1.009E-9*T**3)**3*(1E-30*N_A/136)-8.006E-9*P/1E6+5.448E-12*(P/1E6)**2
     Psat_hydrate = math.exp(pvapConsts[0]*math.log(T)+pvapConsts[1]/T+pvapConsts[2]+pvapConsts[3]*T)
     
-    dH = math.ln(f_w/(Psat_hydrate*math.exp(Vm_hydrate*(P-Psat_hydrate)/(R*T))))
+    dH = math.log(f_w/(Psat_hydrate*math.exp(Vm_hydrate*(P-Psat_hydrate)/(R*T))))
     
     if structure == "I":
         nu1 = 0.043478261
@@ -112,35 +138,48 @@ def getLangConst(T, P, compoundData, structure):
         nu1 = 0.117647059
         nu2 = 0.058823529
     
-    frac = [0, 0]
+    frac = [[0],[0]]
     
-    #Figure out how to get fractions back from dH
-    frac[1] = 1-math.exp(dH/nu2)
-    #frac[1] = 1-math.exp((dH-nu1*math.log(1-frac[2]))/nu2)
+    def f(frac1):
+        if frac1 >=1:
+            frac1 = 0.9999999
+        frac0 = 0 #1-math.exp((dH-nu2*math.log(1-frac1))/nu1)
+        dHexpected = nu1*math.log(1-frac0) + nu2*math.log(1-frac1)
+        return abs(dH - dHexpected)
     
+    frac[1][0] = scipy.optimize.minimize(f, 0.9996, bounds=[(0,0.9999999)]).x
+    frac[0][0] = 1-math.exp((dH-nu2*math.log(1-frac[1][0]))/nu1)
+    
+    Cgg = simFunctions.Lang_GG_Const(T, compoundData, frac, structure)
+    Cml = [0,0]
     for i in range(2):
-        Cgg = simFunctions.Lang_GG_Const(T, compoundData, frac[i], structure)
-        Cml = frac[i]/(Cgg*fug_vap*(1-frac[i]))
+        Cml[i] = frac[i][0]/(Cgg[0][i]*fug_vap*(1-frac[i][0]))
     
     return Cml
 
 def generateParameters(T, lang_consts):
-    def model(T, A, B, D):
-        return math.exp(A+B/T+D/T/T)
+    def model(x, A, B, D):
+        return numpy.exp(A+B/x+D/x/x)
     
-    initialGuess = [-22, 1000, 10000] #Completely arbitrary, based on existing values
+    initialGuess = [-19.6865, 870.0524, -14208.0553] #Completely arbitrary, based on existing values
     
-    A, B, D = scipy.optimize.curve_fit(model, T, lang_consts, p0=initialGuess)[0]
+    A, B, D = scipy.optimize.curve_fit(model, numpy.array(T).flatten(), numpy.array(lang_consts).flatten(), p0=initialGuess)[0]
     return A, B, D
 
-'''Logic Begins Here'''
-Cml = [0 for i in range(len(temperatures))]
+#Logic Begins Here
+Cml = [[0 for i in range(len(temperatures))],[0 for i in range(len(temperatures))]]
 for i in range(len(temperatures)):
-    Cml[i] = getLangConst(temperatures[i], pressures[i], compoundData, structures[i])
+    consts = getLangConst(temperatures[i], pressures[i], compoundData, structures[i])
+    Cml[0][i] = consts[0]
+    Cml[1][i] = consts[1][0]
 
-A, B, D = generateParameters(temperatures, Cml)
+A1, B1, D1 = generateParameters(temperatures, Cml[:][0])
+A2, B2, D2 = generateParameters(temperatures, Cml[:][1])
 
 print("Langmuir Constant Parameter Fit:")
-print("A: " + str(A))
-print("B: " + str(A))
-print("D: " + str(A))
+print("A1: " + str(A1))
+print("B1: " + str(B1))
+print("D1: " + str(D1))
+print("A2: " + str(A2))
+print("B2: " + str(B2))
+print("D2: " + str(D2))
