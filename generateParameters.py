@@ -11,7 +11,8 @@ errorMargin = 1E-9
 
 fluidProperties = pandas.read_excel('Data.xlsx', sheet_name='Fluid Properties')
 
-filename = input("Equilibrium Data File name: ")
+#filename = input("Equilibrium Data File name: ")
+filename = 'i-C4H10_data.csv'
 guessFile = pandas.read_csv(filename)
 temperatures = guessFile["T (K)"].tolist()
 pressures = guessFile["P (Mpa)"].tolist()
@@ -38,22 +39,18 @@ pvapConsts = [float(input("1st Empty Hydrate Vapor Pressure Constant: ")),
      float(input("4th Empty Hydrate Vapor Pressure Constant: "))]
 '''
 
-#for Propane
+compoundData = [[6, "i-C4H10", float(407.81), float(3.629), float(0.184),
+                float(0.0885), 0,
+                numpy.array(['{1: 3, 3: 1}'], dtype=object),
+                float(10.57),
+                float(8.14)]]
 
-compoundData = [[3, "C3H8", float(369.8), float(4.246), float(0.152),
-                float(0.03136), 0,
-                numpy.array(['{1: 2, 2: 1}'], dtype=object),
-                float(0.95),
-                float(6.29)]]
+H = [190.982, -4913, -34.5102, 0]
 
-H = [-628.866,
-     31638.4,
-     88.0808,
-     0]
-pvapConsts = [4.707955084,
-     -5449.888687,
+pvapConsts = [4.68180,
+     -5455.2664,
      2.778907444,
-     -0.009232972]
+     -0.0089678]
 
 def Z(compoundData, T, P):
     waterData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == 0])[0]
@@ -147,13 +144,15 @@ def getLangConst(T, P, compoundData, structure):
         dHexpected = nu1*math.log(1-frac0) + nu2*math.log(1-frac1)
         return abs(dH - dHexpected)
     
-    frac[1][0] = scipy.optimize.minimize(f, 0.9996, bounds=[(0,0.9999999)]).x
-    frac[0][0] = 1-math.exp((dH-nu2*math.log(1-frac[1][0]))/nu1)
+    frac[1][0] = scipy.optimize.minimize(f, 0.984, bounds=[(0,0.9999999)]).x
+    frac[0][0] = 0 #1-math.exp((dH-nu2*math.log(1-frac[1][0]))/nu1)
     
     Cgg = simFunctions.Lang_GG_Const(T, compoundData, frac, structure)
     Cml = [0,0]
     for i in range(2):
         Cml[i] = frac[i][0]/(Cgg[0][i]*fug_vap*(1-frac[i][0]))
+        if Cml [i] < 0:
+            Cml [i] = 0
     
     return Cml
 
@@ -173,7 +172,7 @@ for i in range(len(temperatures)):
     Cml[0][i] = consts[0]
     Cml[1][i] = consts[1][0]
 
-A1, B1, D1 = generateParameters(temperatures, Cml[:][0])
+A1, B1, D1 = -100, 0, 0 #generateParameters(temperatures, Cml[:][0])
 A2, B2, D2 = generateParameters(temperatures, Cml[:][1])
 
 print("Langmuir Constant Parameter Fit:")

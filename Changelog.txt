@@ -1,6 +1,8 @@
-1. Implemented HLS Correlation for non-fresh water in commandline and webapp
-2. Implemented Freezing Point Depression Correlation for non-fresh water
-3. Fixed an issue with N2 Equilibrium Point calculations, now calculates correctly
-4. Fixed an issue with webapp single-point equilibrium calculations
-5. Commandline program will now export equilbrium data to a .csv file
-6. Improved Propane Calculation
+1. Removed H2 Data
+2. Properly implemented the HLS correlation for commandline and webapp programs
+3. Added Isobutane Data
+4. Fixed an issue where the webapp would not return data when calculating multiple lines
+5. Improved multipoint interpolated guesses when only a range is provided
+6. Fixed an issue where attempting to calculate temperature depression with no salt resulted in an error
+7. Added functionality to calculate the necessary weight concentration of a given salt or inhibitor to achieve
+   a given change in equilibrium temperature

@@ -1,7 +1,6 @@
 import simFunctions
 import numpy
 import time
-import matplotlib.pyplot as plt
 import math
 import csv
 
@@ -20,7 +19,10 @@ else:
         minGuessPressure = float(input("Minimum Guess Pressure (MPa): "))*1E6 #Pressure in Pa
         maxGuessPressure = float(input("Maximum Guess Pressure (MPa): "))*1E6 #Pressure in Pa
         T = numpy.arange(maxTemp, minTemp-(maxTemp-minTemp)/noPoints, -1*(maxTemp-minTemp)/(noPoints-1))
-        P = numpy.arange(maxGuessPressure, minGuessPressure-(maxGuessPressure-minGuessPressure)/noPoints, -1*(maxGuessPressure-minGuessPressure)/(noPoints-1))
+        logP = numpy.arange(math.log(maxGuessPressure), math.log(minGuessPressure)-(math.log(maxGuessPressure)-math.log(minGuessPressure))/noPoints, -1*(math.log(maxGuessPressure)-math.log(minGuessPressure))/(noPoints-1))
+        P = [0 for i in range(len(T))]
+        for i in range(len(logP)):
+            P[i] = round(math.exp(logP[i]), 2)
     else:
         T = [float(input("Temperature (K): "))]
         P = [float(input("Guess Pressure (MPa): "))*1E6]
@@ -63,6 +65,7 @@ if freshWater != "Y":
         saltConcs[i] = float(input("Concentration of " + salts[i]+ " (%): "))
     for i in range(len(inhibitors)):
         inhibitorConcs[i] = float(input("Concentration of " + inhibitors[i]+ " (%): "))
+    betaGas = float(input("betaGas: "))
 else:
     saltConcs = [0 for i in range(len(salts))]
     inhibitorConcs = [0 for i in range(len(inhibitors))]
@@ -71,13 +74,24 @@ print("Calculating...")
 startTime = time.time()
 eqPressure = numpy.array([0 for i in range(len(T))],dtype=float)
 eqStructure = [0 for i in range(len(T))]
+eqOccupancy = [0 for i in range(len(T))],[0 for i in range(len(T))]
 
 for i in range(len(T)):
     convergence = simFunctions.equilibriumPressure(T[i], P[i], components, moleFractions, saltConcs, inhibitorConcs)
     eqPressure[i] = convergence[0]/1E6 #In MPa
     eqStructure[i] = convergence[1]
+    eqOccupancy[0][i] = convergence[2][0]
+    eqOccupancy[1][i] = convergence[2][1]
     print("Temperature " + str(i + 1) + " convergence point reached with a Structure " + convergence[1] + " hydrate.")
     print("Occupancy: " + str(convergence[2]))
+    
+#Calculate Inhibited Temperatures
+TInhibited = [0 for i in range(len(T))]
+if freshWater != "Y":
+    for i in range(len(T)):
+        TInhibited[i] = simFunctions.HuLeeSum(T[i], saltConcs, inhibitorConcs, betaGas)
+else:
+    TInhibited = T
     
 endTime = time.time()
 
@@ -85,8 +99,8 @@ print("Time to Complete Calculation: " + str(round(endTime-startTime, 3)) + " se
 print("per Data Point: " + str(round((endTime-startTime)/noPoints, 3)) + " seconds")
 
 with open(exportFileName, mode = 'w', newline='') as file:
-    data = [['T (K)', 'P (MPa)', 'Structure', 'Small Cage Occupancy', 'Large Cage Occupancy']]
+    data = [['T (K)', 'T Inhibited (K) (If Applicable)', 'P (MPa)', 'Structure', 'Small Cage Occupancy', 'Large Cage Occupancy']]
     for i in range(noPoints):
-        data.append([T[i], eqPressure[i], eqStructure[i], convergence[2][0], convergence[2][1]])
+        data.append([T[i], TInhibited[i], eqPressure[i], eqStructure[i], eqOccupancy[0][i], eqOccupancy[1][i]])
     writer = csv.writer(file)
     writer.writerows(data)
