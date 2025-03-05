@@ -65,6 +65,11 @@ if freshWater != "Y":
         saltConcs[i] = float(input("Concentration of " + salts[i]+ " (%): "))
     for i in range(len(inhibitors)):
         inhibitorConcs[i] = float(input("Concentration of " + inhibitors[i]+ " (%): "))
+    if simFunctions.checkMaxConc(inhibitorConcs) != "":
+        raise Exception("Inhibitor(s) " + simFunctions.checkMaxConc(inhibitorConcs) + "Exceed(s) Maximum Concentration")
+    if sum(inhibitorConcs)+sum(saltConcs) >= 1:
+        raise Exception("Weight Percent of Inhibitors and Salts Exceeds 100%")
+        
     betaGas = float(input("betaGas: "))
 else:
     saltConcs = [0 for i in range(len(salts))]

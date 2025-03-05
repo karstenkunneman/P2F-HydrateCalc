@@ -297,11 +297,11 @@ def freezingPointDepression(compounds, T, fug_vap, compoundData, P, chemGroups, 
     
     phaseComposition = liqPhaseComposition(compounds, T, fug_vap, compoundData, P, Psat)
     deltadT = R*(273.15)**2/6011*math.log(liqPhaseComposition(compounds, T, fug_vap, compoundData, P, Psat)[0]*activityCoeff(T, phaseComposition, chemGroups))
-    waterWt = (100 - sum(saltConcs) - sum(inhibitorConcs))/1000 #In kg
+    '''waterWt = (100 - sum(saltConcs) - sum(inhibitorConcs))/1000 #In kg
     for i in range(len(saltConcs)):
         deltadT += (saltData[i][2]+saltData[i][3])*saltData[i][6]*(saltConcs[i]/saltData[i][1])/waterWt
     for i in range(len(inhibitorConcs)):
-        deltadT += inhibitorData[i][4]*(inhibitorConcs[i]/inhibitorData[i][1])/waterWt
+        deltadT += inhibitorData[i][4]*(inhibitorConcs[i]/inhibitorData[i][1])/waterWt'''
     return deltadT
 
 def activityCoeff(T, phaseComposition, chemGroups):
@@ -407,6 +407,13 @@ def HuLeeSum(T, saltConcs, inhibitorConcs, betaGas):
     Tinhibited = T/(1-betaGas*(lnawSalts+sum(lnawInhibitors))*T)
     return Tinhibited
 
+def checkMaxConc(inhibitorConcs):
+    exceededInhibitors = ""
+    for i in range(len(inhibitorConcs)):
+        if inhibitorConcs[i] > inhibitorData[i][5]:
+            exceededInhibitors += str(inhibitorData[i][0]) + " "
+    return exceededInhibitors
+
 def getConcentration(T, TDesired, inhibitor, salt, betaGas, noInhibitors, noSalts):
     inhibitorConcs = [0 for i in range(noInhibitors)]
     saltConcs = [0 for i in range(noSalts)]
@@ -430,6 +437,39 @@ def getConcentration(T, TDesired, inhibitor, salt, betaGas, noInhibitors, noSalt
     conc = scipy.optimize.fsolve(f,1,args=inhibitor)[0]
 
     return conc
+
+def betaGas(temperatures, pressures, structure):
+    for i in range(len(pressures)):
+        pressures[i]*=1E6
+
+    inverseTemp = []
+    lnPressure = []
+    for i in range(len(temperatures)):
+        if temperatures[i] >= 273.15:
+            inverseTemp.append(1/temperatures[i])
+            lnPressure.append(math.log(pressures[i]))
+        
+    slope = numpy.polyfit(inverseTemp, lnPressure, 1)[0]
+    
+    if structure == "I":
+        betaGas = -5.75/slope
+    else:
+        betaGas = -(5+(2/3))/slope
+        
+    return betaGas
+
+def guessPressure(compounds, moleFractions, T):
+    compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])
+    for i in range(len(compounds)-1):
+        compoundData = numpy.append(compoundData, fluidProperties.loc[fluidProperties['Compound ID'] == compounds[i+1]], axis = 0)
+
+    pressureConstant = 0
+    for i in range(len(compoundData)):
+        pressureConstant += moleFractions[i]*compoundData[i][6]
+    
+    guessPressure = math.exp(pressureConstant*T)
+    return guessPressure
+
 
 def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs):
     compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])

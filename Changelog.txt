@@ -1,8 +1,12 @@
-1. Removed H2 Data
-2. Properly implemented the HLS correlation for commandline and webapp programs
-3. Added Isobutane Data
-4. Fixed an issue where the webapp would not return data when calculating multiple lines
-5. Improved multipoint interpolated guesses when only a range is provided
-6. Fixed an issue where attempting to calculate temperature depression with no salt resulted in an error
-7. Added functionality to calculate the necessary weight concentration of a given salt or inhibitor to achieve
-   a given change in equilibrium temperature
+1. Added n-pentane and n-hexane data
+2. Improved formatting on webapp plots
+3. Changed webapp mole fraction input to a more user-friendly table
+4. Changed webapp inhibitor weight fraction input to a more user-friendly table
+5. Improved formatting of output table
+6. Webapp will now confirm that the sum of mole fractions is 1
+7. Webapp and commandline will now confirm that no inhibitors exceed individual maximum concentrations or 100%
+8. Added ability to switch between unit sets on webapp
+9. Added betaGas calculator tab to webapp
+10.Added automatic pressure guessing (with the ability to manually guess pressures if necessary)
+11.Added automatic betaGas calculation from equilibrium (with the ability to manually input betaGas if necessary)
+	- Note, betaGas calculation is currently broken
