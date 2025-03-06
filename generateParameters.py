@@ -12,13 +12,15 @@ errorMargin = 1E-9
 fluidProperties = pandas.read_excel('Data.xlsx', sheet_name='Fluid Properties')
 
 #filename = input("Equilibrium Data File name: ")
-filename = 'i-C4H10_data.csv'
+filename = 'H2S Data.csv'
 guessFile = pandas.read_csv(filename)
 temperatures = guessFile["T (K)"].tolist()
 pressures = guessFile["P (Mpa)"].tolist()
 for i in range(len(pressures)):
     pressures[i]*=1E6
 structures = guessFile["Structure"].tolist()
+smallFrac = guessFile["Small Cage Occupancy"].tolist()
+largeFrac = guessFile["Large Cage Occupancy"].tolist()
 
 '''
 compoundData = [0, 0, float(input("Critical Temperature(K): ")),
@@ -39,18 +41,18 @@ pvapConsts = [float(input("1st Empty Hydrate Vapor Pressure Constant: ")),
      float(input("4th Empty Hydrate Vapor Pressure Constant: "))]
 '''
 
-compoundData = [[6, "i-C4H10", float(407.81), float(3.629), float(0.184),
-                float(0.0885), 0,
-                numpy.array(['{1: 3, 3: 1}'], dtype=object),
-                float(10.57),
-                float(8.14)]]
+compoundData = [[9, "H2S", float(373.1), float(9.0), float(0.1),
+                float(0), 0,
+                numpy.array(['{114: 1}'], dtype=object),
+                float(10.457),
+                float(3.78)]]
 
-H = [190.982, -4913, -34.5102, 0]
+H = [-149.551, 8227.328, 20.2327, 0.00129]
 
-pvapConsts = [4.68180,
-     -5455.2664,
+pvapConsts = [4.6446,
+     -5150.369,
      2.778907444,
-     -0.0089678]
+     -0.0087553]
 
 def Z(compoundData, T, P):
     waterData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == 0])[0]
@@ -92,7 +94,7 @@ def freezingPointDepression(T, fug_vap, compoundData, P, chemGroups):
     deltadT = R*(273.15)**2/6011*math.log(liqPhaseComposition(T, fug_vap, compoundData, P, Psat)[0]*activityCoeff(T, phaseComposition, chemGroups))
     return deltadT
 
-def getLangConst(T, P, compoundData, structure):
+def getLangConst(T, P, compoundData, structure, i):
     fug_vap = simFunctions.PengRobinson(compoundData, [1], T, P)[2][0]
 
     if T > 260 and T < 280:
@@ -135,8 +137,9 @@ def getLangConst(T, P, compoundData, structure):
         nu1 = 0.117647059
         nu2 = 0.058823529
     
-    frac = [[0],[0]]
     
+    frac = [[0],[0]]
+    '''
     def f(frac1):
         if frac1 >=1:
             frac1 = 0.9999999
@@ -146,11 +149,16 @@ def getLangConst(T, P, compoundData, structure):
     
     frac[1][0] = scipy.optimize.minimize(f, 0.984, bounds=[(0,0.9999999)]).x
     frac[0][0] = 0 #1-math.exp((dH-nu2*math.log(1-frac[1][0]))/nu1)
+    '''
+    
+    frac[1][0] = largeFrac[i]
+    frac[0][0] = smallFrac[i]
     
     Cgg = simFunctions.Lang_GG_Const(T, compoundData, frac, structure)
     Cml = [0,0]
     for i in range(2):
-        Cml[i] = frac[i][0]/(Cgg[0][i]*fug_vap*(1-frac[i][0]))
+        #Cml[i] = frac[i][0]/(Cgg[0][i]*fug_vap*(1-frac[i][0]))
+        Cml[i] = frac[i][0]/(fug_vap*(1-frac[i][0]))*Cgg[0][i]
         if Cml [i] < 0:
             Cml [i] = 0
     
@@ -168,11 +176,11 @@ def generateParameters(T, lang_consts):
 #Logic Begins Here
 Cml = [[0 for i in range(len(temperatures))],[0 for i in range(len(temperatures))]]
 for i in range(len(temperatures)):
-    consts = getLangConst(temperatures[i], pressures[i], compoundData, structures[i])
+    consts = getLangConst(temperatures[i], pressures[i], compoundData, structures[i], i)
     Cml[0][i] = consts[0]
-    Cml[1][i] = consts[1][0]
+    Cml[1][i] = consts[1]
 
-A1, B1, D1 = -100, 0, 0 #generateParameters(temperatures, Cml[:][0])
+A1, B1, D1 = generateParameters(temperatures, Cml[:][0])
 A2, B2, D2 = generateParameters(temperatures, Cml[:][1])
 
 print("Langmuir Constant Parameter Fit:")

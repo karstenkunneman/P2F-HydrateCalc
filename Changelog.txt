@@ -1,12 +1,3 @@
-1. Added n-pentane and n-hexane data
-2. Improved formatting on webapp plots
-3. Changed webapp mole fraction input to a more user-friendly table
-4. Changed webapp inhibitor weight fraction input to a more user-friendly table
-5. Improved formatting of output table
-6. Webapp will now confirm that the sum of mole fractions is 1
-7. Webapp and commandline will now confirm that no inhibitors exceed individual maximum concentrations or 100%
-8. Added ability to switch between unit sets on webapp
-9. Added betaGas calculator tab to webapp
-10.Added automatic pressure guessing (with the ability to manually guess pressures if necessary)
-11.Added automatic betaGas calculation from equilibrium (with the ability to manually input betaGas if necessary)
-	- Note, betaGas calculation is currently broken
+1. Added proper README.txt and requirements.txt files
+2. Added license information
+3. Fixed an issue where attempting to use automatic calculation of betaGas would return an error

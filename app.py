@@ -1,3 +1,7 @@
+#This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit https://creativecommons.org/licenses/by-sa/4.0/.
+#Created by Karsten Kunneman and Amadeu K. Sum at the Colorado School of Mines
+#©2025, All Rights Reserved
+
 import simFunctions
 import streamlit as st
 import pandas as pd
@@ -132,7 +136,7 @@ if programType == "Equilibrium Calculator":
             inhibitorConcs = inputInhibitorDf['Weight Fraction'].tolist()
 
     if st.button("Calculate"):
-        if sum(moleFractions) == 1 and simFunctions.checkMaxConc(inhibitorConcs) == "" and sum(inhibitorConcs)+sum(saltConcs) < 1:
+        if sum(moleFractions) == 1 and simFunctions.checkMaxConc(inhibitorConcs) == "" and sum(inhibitorConcs)+sum(saltConcs) < 100:
             startTime = time.time()
             if units != "K/MPa":
                 for i in range(len(T)):
@@ -151,7 +155,7 @@ if programType == "Equilibrium Calculator":
                     eqFractions[i] = [[round(float(simResult[2][0][j]), 4) for j in range(len(simResult[2][0]))], [round(float(simResult[2][1][j]), 4) for j in range(len(simResult[2][1]))]]
                     with progressBar:
                         st.progress((i+1)/len(T), str(i+1) + "/" + str(len(T)))
-                betaGas = betaGas(T, eqPressure, eqStructure[0]) #TODO: Figure out how to account for multiple structures
+                betaGas = simFunctions.betaGas(T, eqPressure, eqStructure[0]) #TODO: Figure out how to account for multiple structures
                 for i in range(len(T)):
                     if freshWater == False:
                         TInhibited[i] = round(simFunctions.HuLeeSum(T[i], saltConcs, inhibitorConcs, betaGas), 1)
@@ -159,6 +163,7 @@ if programType == "Equilibrium Calculator":
                         TInhibited[i] = T[i]
                 eqFractions = numpy.array(eqFractions)
                 for i in range(len(T)):
+                    eqPressure[i] /= 1E6
                     if units != "K/MPa":
                         T[i] = (T[i]-273.15)*1.8 + 32
                         TInhibited[i] = (TInhibited[i]-273.15)*1.8 + 32
@@ -211,7 +216,7 @@ if programType == "Equilibrium Calculator":
                 st.markdown(f":red[Sum of Mole Fractions is Not 1]")
             if simFunctions.checkMaxConc(inhibitorConcs) != "":
                 st.markdown(f":red[" + "Inhibitor(s) " + simFunctions.checkMaxConc(inhibitorConcs) + " Exceed(s) Maximum Concentration" + "]")
-            if sum(inhibitorConcs)+sum(saltConcs) >= 1:
+            if sum(inhibitorConcs)+sum(saltConcs) >= 100:
                 st.markdown(f":red[Weight Percent of Inhibitors and Salts Exceeds 100%]")
 
 elif programType == "Minimum Concentration Calculator":
