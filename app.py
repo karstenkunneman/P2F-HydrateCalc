@@ -16,9 +16,9 @@ for i in range(len(IDs)):
     componentList.append(compounds[i])
 
 st.title('Gas Hydrate Equilibrium Calculator')
-st.caption('Version 2025-03-06')
+st.caption('Version 2025-03-13')
 
-programType = st.radio("Calculation Type", ["Equilibrium Calculator", "Minimum Concentration Calculator", "betaGas Calculator"], horizontal=True)
+programType = st.radio("Calculation Type", ["Equilibrium Calculator", "Minimum Concentration Calculator"], horizontal=True)
 
 if programType == "Equilibrium Calculator":
     #Mole Fraction Input Table
@@ -44,13 +44,8 @@ if programType == "Equilibrium Calculator":
     csvTemplate = st.download_button("Guess File Template", open("Input Template.csv", encoding='utf-8'), file_name="Input Template.csv")
 
     #Unit Selector
-    units = st.radio("Unit Set", ["K/MPa", "°F/Psia"], horizontal=True)
-    if units == "K/MPa":
-        tempUnit = "K"
-        pressureUnit = "MPa"
-    if units == "°F/Psia":
-        tempUnit = "°F"
-        pressureUnit = "psia"
+    tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F", "R"], horizontal=True)
+    pressureUnit = st.radio("Pressure Unit", ["MPa", "bar", "psia", "mmHg"], horizontal=True)
 
     #If no input file given, take inputs from user through UI
     if csvGuesses == None:
@@ -69,13 +64,12 @@ if programType == "Equilibrium Calculator":
             if userGuess == True:
                 c1, c2 = st.columns(2)
                 with c1:
-                    minGuessPressure = float(st.text_input("Minimum Guess Pressure ("+pressureUnit+"): ", 0.089))*1E6 #Pressure in Pa
+                    minGuessPressure = float(st.text_input("Minimum Guess Pressure ("+pressureUnit+"): ", 0.089)) #Pressure in Pa
                 with c2:
-                    maxGuessPressure = float(st.text_input("Maximum Guess Pressure ("+pressureUnit+"): ", 74.291))*1E6 #Pressure in Pa
+                    maxGuessPressure = float(st.text_input("Maximum Guess Pressure ("+pressureUnit+"): ", 74.291)) #Pressure in Pa
             else:
-                if units != "K/MPa":
-                    for i in range(len(T)):
-                        T[i] = (T[i]-32)/1.8+273.15
+                for i in range(len(T)):
+                    T[i] = simFunctions.tempConversion(tempUnit, T[i], False)
                 minGuessPressure = simFunctions.guessPressure(components, moleFractions, T[len(T)-1])
                 maxGuessPressure = simFunctions.guessPressure(components, moleFractions, T[0])
 
@@ -87,17 +81,14 @@ if programType == "Equilibrium Calculator":
         else:
             T = [float(st.text_input('Temperature ('+tempUnit+')', 278.1))]
             if userGuess == True:
-                P = [float(st.text_input('Guess Pressure ('+pressureUnit+')', 4.249))*1E6]
+                P = [float(st.text_input('Guess Pressure ('+pressureUnit+')', 4.249))]
             else:
                 P = [simFunctions.guessPressure(components, moleFractions, T[0])]
 
     else:
         guessFile = numpy.genfromtxt(csvGuesses, delimiter=',', skip_header=1)
         T = guessFile[:,0]
-        if units != "K/MPa":
-            for i in range(len(T)):
-                T[i] = (T[i]-32)/1.8+273.15
-        P = guessFile[:,1]*1E6
+        P = guessFile[:,1]
         noPoints = len(T)
         if noPoints > 1:
             calculateRange = True
@@ -108,15 +99,9 @@ if programType == "Equilibrium Calculator":
     inhibitorConcs = []
     saltConcs = []
     if freshWater == False:
-        if calculateRange == True:
-            manualBetaGas = st.toggle('Custom betaGas?', False)
-            if manualBetaGas == True or len([x for x in T if x>=273.15]) <= 1:
-                betaGas = float(st.text_input("betaGas: ", 9.120E-04))
-            else:
-                betaGas = 0
-        else:
-            betaGas = float(st.text_input("betaGas: ", 9.120E-04))
-
+        if calculateRange == False:
+                hydrateType = st.radio("Hydrate Type", ["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"], horizontal=False)
+                betaGas = [9.120E-4, 8.165E-4, 9.186E-4, 9.432E-4, 1.058E-3, 8.755E-4][["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"].index(hydrateType)]
         #Inhibitor Concentration input Tables
         salts, inhibitors = simFunctions.getInhibitors()
 
@@ -135,50 +120,52 @@ if programType == "Equilibrium Calculator":
             inputInhibitorDf = st.data_editor(inhibitorConcDf, hide_index=True)
             inhibitorConcs = inputInhibitorDf['Weight Fraction'].tolist()
 
+    calculated = False
     if st.button("Calculate"):
         if sum(moleFractions) == 1 and simFunctions.checkMaxConc(inhibitorConcs) == "" and sum(inhibitorConcs)+sum(saltConcs) < 100:
             startTime = time.time()
-            if units != "K/MPa":
-                for i in range(len(T)):
-                    T[i] = (T[i]-32)/1.8+273.15
-                    P[i] *= 0.00689475728
+            for i in range(len(T)):
+                P[i] = simFunctions.pressureConversion(pressureUnit, P[i], False)
+
+            eqPressure = [0 for i in range(len(T))]
+            eqStructure = [0 for i in range(len(T))]
+            eqFractions = [0 for i in range(len(T))]
+            TInhibited = [0 for i in range(len(T))]
             if calculateRange == True:
-                eqPressure = [0 for i in range(len(T))]
-                eqStructure = [0 for i in range(len(T))]
-                eqFractions = [0 for i in range(len(T))]
-                TInhibited = [0 for i in range(len(T))]
                 progressBar = st.progress(0, str(0) + "/" + str(len(T)))
                 for i in range(len(T)):
                     simResult = simFunctions.equilibriumPressure(T[i], P[i], components, moleFractions, saltConcs, inhibitorConcs)
-                    eqPressure[i] = simResult[0]/1E6 #In MPa
+                    eqPressure[i] = simResult[0]
                     eqStructure[i] = simResult[1]
                     eqFractions[i] = [[round(float(simResult[2][0][j]), 4) for j in range(len(simResult[2][0]))], [round(float(simResult[2][1][j]), 4) for j in range(len(simResult[2][1]))]]
                     with progressBar:
                         st.progress((i+1)/len(T), str(i+1) + "/" + str(len(T)))
-                betaGas = simFunctions.betaGas(T, eqPressure, eqStructure[0]) #TODO: Figure out how to account for multiple structures
+                betaGas = simFunctions.betaGas(T, eqPressure)
                 for i in range(len(T)):
                     if freshWater == False:
-                        TInhibited[i] = round(simFunctions.HuLeeSum(T[i], saltConcs, inhibitorConcs, betaGas), 1)
+                        TInhibited[i] = simFunctions.HuLeeSum(T[i], saltConcs, inhibitorConcs, betaGas)
                     else:
                         TInhibited[i] = T[i]
                 eqFractions = numpy.array(eqFractions)
                 for i in range(len(T)):
-                    eqPressure[i] /= 1E6
-                    if units != "K/MPa":
-                        T[i] = (T[i]-273.15)*1.8 + 32
-                        TInhibited[i] = (TInhibited[i]-273.15)*1.8 + 32
-                        eqPressure[i] /= 0.00689475728
+                    T[i] = simFunctions.tempConversion(tempUnit, T[i], True)
+                    if TInhibited[i] != None:
+                        TInhibited[i] = round(simFunctions.tempConversion(tempUnit, TInhibited[i], True), 1)
+                    eqPressure[i] = simFunctions.pressureConversion(pressureUnit, eqPressure[i], True)
                     "{:.2e}".format(eqPressure[i])
-                fig = plt.figure()
+                fig, ax = plt.subplots()
                 plt.plot(T, eqPressure, '-', label='Fresh Water')
                 if freshWater == False:
-                    plt.plot(TInhibited, eqPressure, '--', label='Inhibited System')
+                    plt.plot([val for val, condition in zip(TInhibited, TInhibited) if condition is not None], [val for val, condition in zip(eqPressure, TInhibited) if condition is not None], '--', label='Inhibited System')
                     plt.legend(prop={'family': 'Arial'})
                 plt.yscale("log")
                 plt.xlabel("Temperature ("+tempUnit+")", **{'fontname':'Arial'})
                 plt.ylabel("Pressure ("+pressureUnit+")", **{'fontname':'Arial'})
                 plt.xticks(**{'fontname':'Arial'})
                 plt.yticks(**{'fontname':'Arial'})
+
+                plt.text(0.5, 0.5, "Phases to Flow Research Group", transform=ax.transAxes, fontsize=20, color='gray', alpha=0.5, ha='center', va='center', rotation=30)
+                
                 plt.tick_params(axis='both', which='both', direction='in')
                 st.pyplot(fig)
                 for i in range(len(T)):
@@ -186,31 +173,31 @@ if programType == "Equilibrium Calculator":
                         eqPressure[i] = f"{eqPressure[i]:.2e}"
                     else:
                         eqPressure[i] = round(eqPressure[i], 2)
-                data = pd.DataFrame({'T ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Eq. Pressure ('+pressureUnit+')': eqPressure, 'Eq. Structure': eqStructure, 'Small Cage Occupancies': eqFractions[:,0].tolist(), 'Large Cage Occupancies': eqFractions[:,1].tolist()}, [i for i in range(len(T))])
+                showFracs = st.toggle("Show Fractional Occupancies", False)
             else:
                 simResult = simFunctions.equilibriumPressure(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
-                eqPressure = simResult[0]/1E6 #In MPa
-                eqStructure = simResult[1]
-                eqFractions = [[round(float(simResult[2][0][j]), 4) for j in range(len(simResult[2][0]))], [round(float(simResult[2][1][j]), 4) for j in range(len(simResult[2][1]))]]
+                eqPressure[0] = simResult[0]
+                eqStructure[0] = simResult[1]
+                eqFractions[0] = [[round(float(simResult[2][0][j]), 4) for j in range(len(simResult[2][0]))], [round(float(simResult[2][1][j]), 4) for j in range(len(simResult[2][1]))]]
+                eqFractions = numpy.array(eqFractions)
                 if freshWater == False:
-                    TInhibited = round(simFunctions.HuLeeSum(T[0], saltConcs, inhibitorConcs, betaGas), 1)
+                    TInhibited[i] = round(simFunctions.HuLeeSum(T[0], saltConcs, inhibitorConcs, betaGas), 1)
                 else:
-                    TInhibited = T[0]
+                    TInhibited[i] = T[0]
                 for i in range(len(T)):
-                    if units != "K/MPa":
-                        T[i] = (T[i]-273.15)*1.8 + 32
-                        TInhibited[i] = (TInhibited[i]-273.15)*1.8 + 32
-                        eqPressure[i] /= 0.00689475728
-                    if eqPressure < 1 or eqPressure >= 10:
-                        eqPressure = f"{eqPressure:.2e}"
+                    T[i] = round(simFunctions.tempConversion(tempUnit, T[i], True), 1)
+                    if TInhibited[i] != None:
+                        TInhibited[i] = round(simFunctions.tempConversion(tempUnit, TInhibited[i], True), 1)
+                    eqPressure[i] = simFunctions.pressureConversion(pressureUnit, eqPressure[i], True)
+                    if eqPressure[i] < 1 or eqPressure[i] >= 10:
+                        eqPressure[i] = f"{eqPressure[i]:.2e}"
                     else:
-                        eqPressure = round(eqPressure, 2)
-                data = pd.DataFrame({'T ('+tempUnit+')': T[0], 'Inhibited T ('+tempUnit+')': TInhibited, 'Eq. Pressure ('+pressureUnit+')': eqPressure, 'Eq. Structure': eqStructure, 'Small Cage Occupancies': [eqFractions[0]], 'Large Cage Occupancies': [eqFractions[1]]})
-            st.dataframe(data, hide_index = True)
+                        eqPressure[i] = round(eqPressure[i], 2)
             endTime = time.time()
             st.text("Time to Complete Calculation: " + str(round(endTime-startTime, 3)) + " seconds")
             if len(T) > 1:
                 st.text("per Data Point: " + str(round((endTime-startTime)/noPoints, 3)) + " seconds")
+            calculated = True
         else:
             if sum(moleFractions) != 1:
                 st.markdown(f":red[Sum of Mole Fractions is Not 1]")
@@ -218,16 +205,18 @@ if programType == "Equilibrium Calculator":
                 st.markdown(f":red[" + "Inhibitor(s) " + simFunctions.checkMaxConc(inhibitorConcs) + " Exceed(s) Maximum Concentration" + "]")
             if sum(inhibitorConcs)+sum(saltConcs) >= 100:
                 st.markdown(f":red[Weight Percent of Inhibitors and Salts Exceeds 100%]")
+    if calculated == True:
+        data = pd.DataFrame({'T ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Eq. Pressure ('+pressureUnit+')': eqPressure, 'Eq. Structure': eqStructure, 'Small Cage Occupancies': eqFractions[:,0].tolist(), 'Large Cage Occupancies': eqFractions[:,1].tolist()}, [i for i in range(len(T))])
+        displayData = pd.DataFrame({'T ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Eq. Pressure ('+pressureUnit+')': eqPressure, 'Eq. Structure': eqStructure}, [i for i in range(len(T))])
+        st.dataframe(displayData, hide_index = True)
+        st.download_button("Full Data Download", data=data.to_csv(index=False).encode('utf-8'), file_name='data.csv', mime='text/csv')
 
 elif programType == "Minimum Concentration Calculator":
-    units = st.radio("Temperature Unit", ["K", "°F"], horizontal=True)
-    if units == "K":
-        tempUnit = "K"
-    if units == "°F":
-        tempUnit = "°F"
+    tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F", "R"], horizontal=True)
     T = float(st.text_input("Fresh Water Equilibrium Temperature ("+tempUnit+"): ", value="280"))
     TDesired = float(st.text_input("Desired Inhibited Equilibrium Temperature ("+tempUnit+"): ", value="275"))
-    betaGas = float(st.text_input("betaGas: ", 9.120E-04))
+    hydrateType = st.radio("Hydrate Type", ["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"], horizontal=False)
+    betaGas = [9.120E-4, 8.165E-4, 9.186E-4, 9.432E-4, 1.058E-3, 8.755E-4][["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"].index(hydrateType)]
     inhibitorType = st.radio("Inhibitor Type", ["Salt", "Liquid Inhibitor"], horizontal=True)
     if inhibitorType == "Liquid Inhibitor":
         salts, inhibitors = simFunctions.getInhibitors()
@@ -246,26 +235,13 @@ elif programType == "Minimum Concentration Calculator":
         salt = st.selectbox('Liquid Inhibitor', saltList)
         salt = saltList.index(salt)
     if st.button("Calculate"):
-        if units == "°F":
-            T = (T-32)/1.8+273.15
-            TDesired = (TDesired-32)/1.8+273.15
+        T = simFunctions.tempConversion(tempUnit, T, False)
+        TDesired = simFunctions.tempConversion(tempUnit, TDesired, False)
         conc = simFunctions.getConcentration(T, TDesired, inhibitor, salt, betaGas, len(inhibitors), len(salts))
         if inhibitor != "salt":
             st.text("Minimum Concentration of " + str(inhibitorList[inhibitor]) + ": " + str(round(conc,1)) + "% w/w")
         else:
             st.text("Minimum Concentration of " + str(saltList[salt]) + ": " + str(round(conc,1)) + "% w/w")
-
-else:
-    equilFile = st.file_uploader("Upload Equilibrium Data", ['csv'])
-
-    structure = st.radio("Structure", ["I", "II"], horizontal=True)
-
-    if equilFile != None:
-        equilData = numpy.genfromtxt(equilFile, delimiter=',', skip_header=1)
-        T = equilData[:,0]
-        P = equilData[:,1]*1E6
-
-        st.write("βgas = " + str(f"{simFunctions.betaGas(T, P, structure):.3e}"))
 
 st.header('Credits')
 st.markdown('''

@@ -23,7 +23,7 @@ saltData = pandas.read_excel('Data.xlsx', sheet_name='Salts Data').to_numpy()
 inhibitorData = pandas.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
 #Constants
-errorMargin = 1E-9
+errorMargin = 1E-5
 R = 8.31446261815324 #m^3 Pa/mol K
 boltzmannConstant = 1.380649E-23 #m^2 kg/s^2 K
 
@@ -172,9 +172,6 @@ def Lang_GG_Const(T, compoundData, fracs, structure):
             
     for i in range(len(I)):
         for j in range(len(I)):
-            #C6[i][j] = (3/2)*alpha[i]*alpha[j]*I[i]*I[j]/(I[i]+I[j])*boltzmannConstant*1.60218e-19
-            #C8[i][j] = 38.10/I[i]*C6[i][j]
-            #C10[i][j] = 762.1/I[i]/I[i]*C6[i][j]
             C6[i][j] = (3/2)*alpha[i]*alpha[j]*I[i]*I[j]/(I[i]+I[j])*23.05/.001987
             C8[i][j] = 496778.3824*alpha[i]*alpha[j]*(I[i]/(2*I[i]+I[j])+I[j]/(2*I[j]+I[i]))
             C10[i][j] = 13260598.42*alpha[i]*alpha[j]/(I[i]+I[j])
@@ -367,48 +364,51 @@ def hydrateFugacity(T, P, PvapConsts, structure, fug_vap, compounds, kiharaParam
     return f_h,frac
 
 def HuLeeSum(T, saltConcs, inhibitorConcs, betaGas):
-    if sum(saltConcs) != 0:
-        catMols = [0 for i in range(len(saltConcs))]
-        anMols = [0 for i in range(len(saltConcs))]
-        catMolFracs = [0 for i in range(len(saltConcs))]
-        anMolFracs = [0 for i in range(len(saltConcs))]
-        for i in range(len(saltConcs)):
-            catMols[i] = saltConcs[i]/saltData[i][1]*saltData[i][4]
-            anMols[i] = saltConcs[i]/saltData[i][1]*saltData[i][5]
-        totalSaltMols = sum(catMols)+sum(anMols)
-        waterMols = (100-sum(saltConcs))/18.015
-        for i in range(len(saltConcs)):
-            catMolFracs[i] = saltData[i][2]*catMols[i]/(waterMols+totalSaltMols)
-            anMolFracs[i] = saltData[i][3]*anMols[i]/(waterMols+totalSaltMols)
-            
+    if T >= 273.15:
+        if sum(saltConcs) != 0:
+            catMols = [0 for i in range(len(saltConcs))]
+            anMols = [0 for i in range(len(saltConcs))]
+            catMolFracs = [0 for i in range(len(saltConcs))]
+            anMolFracs = [0 for i in range(len(saltConcs))]
+            for i in range(len(saltConcs)):
+                catMols[i] = saltConcs[i]/saltData[i][1]*saltData[i][4]
+                anMols[i] = saltConcs[i]/saltData[i][1]*saltData[i][5]
+            totalSaltMols = sum(catMols)+sum(anMols)
+            waterMols = (100-sum(saltConcs))/18.015
+            for i in range(len(saltConcs)):
+                catMolFracs[i] = saltData[i][2]*catMols[i]/(waterMols+totalSaltMols)
+                anMolFracs[i] = saltData[i][3]*anMols[i]/(waterMols+totalSaltMols)
+                
+            inhibitorMols = [0 for i in range(len(inhibitorConcs))]
+            inhibitorMolFracs = [0 for i in range(len(inhibitorConcs))]
+            for i in range(len(inhibitorConcs)):
+                inhibitorMols[i] = inhibitorConcs[i]/(1-0.01*inhibitorConcs[i])/inhibitorData[i][1]
+            totalMols = totalSaltMols + sum(inhibitorMols)
+            for i in range(len(inhibitorConcs)):
+                inhibitorMolFracs[i] = inhibitorMols[i]/totalMols
+
+            totalEffSaltMols = sum(catMolFracs) + sum(anMolFracs)
+        else:
+            waterMols = (100-sum(saltConcs))/18.015
+            totalSaltMols = 0
+            totalEffSaltMols = 0
+
         inhibitorMols = [0 for i in range(len(inhibitorConcs))]
         inhibitorMolFracs = [0 for i in range(len(inhibitorConcs))]
         for i in range(len(inhibitorConcs)):
             inhibitorMols[i] = inhibitorConcs[i]/(1-0.01*inhibitorConcs[i])/inhibitorData[i][1]
         totalMols = totalSaltMols + sum(inhibitorMols)
         for i in range(len(inhibitorConcs)):
-            inhibitorMolFracs[i] = inhibitorMols[i]/totalMols
+            inhibitorMolFracs[i] = inhibitorMols[i]/(totalMols+waterMols)
 
-        totalEffSaltMols = sum(catMolFracs) + sum(anMolFracs)
+        lnawSalts = -1.06152*totalEffSaltMols+3.25726*totalEffSaltMols*totalEffSaltMols-37.2263*totalEffSaltMols*totalEffSaltMols*totalEffSaltMols
+        lnawInhibitors = inhibitorMols = [0 for i in range(len(inhibitorConcs))]
+        for i in range(len(inhibitorConcs)):
+            lnawInhibitors[i] = inhibitorData[i][2]*inhibitorMolFracs[i]+inhibitorData[i][3]*inhibitorMolFracs[i]**2
+
+        Tinhibited = T/(1-betaGas*(lnawSalts+sum(lnawInhibitors))*T)
     else:
-        waterMols = (100-sum(saltConcs))/18.015
-        totalSaltMols = 0
-        totalEffSaltMols = 0
-
-    inhibitorMols = [0 for i in range(len(inhibitorConcs))]
-    inhibitorMolFracs = [0 for i in range(len(inhibitorConcs))]
-    for i in range(len(inhibitorConcs)):
-        inhibitorMols[i] = inhibitorConcs[i]/(1-0.01*inhibitorConcs[i])/inhibitorData[i][1]
-    totalMols = totalSaltMols + sum(inhibitorMols)
-    for i in range(len(inhibitorConcs)):
-        inhibitorMolFracs[i] = inhibitorMols[i]/(totalMols+waterMols)
-
-    lnawSalts = -1.06152*totalEffSaltMols+3.25726*totalEffSaltMols*totalEffSaltMols-37.2263*totalEffSaltMols*totalEffSaltMols*totalEffSaltMols
-    lnawInhibitors = inhibitorMols = [0 for i in range(len(inhibitorConcs))]
-    for i in range(len(inhibitorConcs)):
-        lnawInhibitors[i] = inhibitorData[i][2]*inhibitorMolFracs[i]+inhibitorData[i][3]*inhibitorMolFracs[i]**2
-
-    Tinhibited = T/(1-betaGas*(lnawSalts+sum(lnawInhibitors))*T)
+        Tinhibited = None
     return Tinhibited
 
 def checkMaxConc(inhibitorConcs):
@@ -442,9 +442,9 @@ def getConcentration(T, TDesired, inhibitor, salt, betaGas, noInhibitors, noSalt
 
     return conc
 
-def betaGas(temperatures, pressures, structure):
+def betaGas(temperatures, pressures):
     for i in range(len(pressures)):
-        pressures[i]*=1E6
+        pressures[i]
 
     inverseTemp = []
     lnPressure = []
@@ -452,15 +452,60 @@ def betaGas(temperatures, pressures, structure):
         if temperatures[i] >= 273.15:
             inverseTemp.append(1/temperatures[i])
             lnPressure.append(math.log(pressures[i]))
-        
-    slope = numpy.polyfit(inverseTemp, lnPressure, 1)[0]
     
-    if structure == "I":
-        betaGas = -5.75/slope
-    else:
-        betaGas = -(5+(2/3))/slope
-        
+    try:
+        slope = numpy.polyfit(inverseTemp, lnPressure, 1)[0]
+    
+        betaGas = -10/slope
+
+    except:
+        betaGas = 0
+
     return betaGas
+
+def tempConversion(tempUnit, T, isInverted):
+    if isInverted == False:
+        if tempUnit == "K":
+            T = T
+        elif tempUnit == "°C":
+            T = T - 273.15
+        elif tempUnit == "°F":
+            T = (T-32)/1.8 + 273.15
+        elif tempUnit == "R":
+            T = T/1.8
+    else:
+        if tempUnit == "K":
+            T = T
+        elif tempUnit == "°C":
+            T = T + 273.15
+        elif tempUnit == "°F":
+            T = (T-273.15)*1.8 + 32
+        elif tempUnit == "R":
+            T = T*1.8
+    return T
+    
+def pressureConversion(pressureUnit, P, isInverted):
+    if isInverted == False:
+        if pressureUnit == "MPa":
+            P = P
+        elif pressureUnit == "psia":
+            P /= 145.038
+        elif pressureUnit == "bar":
+            P /= 10
+        elif pressureUnit == "mmHg":
+            P /= 7500.62
+        #P *= 1E6 #MPa to Pa
+    else:
+        P /= 1E6 #Pa to MPa   
+        if pressureUnit == "MPa":
+            P = P
+        elif pressureUnit == "psia":
+            P *= 145.038
+        elif pressureUnit == "bar":
+            P *= 10
+        elif pressureUnit == "mmHg":
+            P *= 7500.62
+    return P
 
 def guessPressure(compounds, moleFractions, T):
     compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])
@@ -563,3 +608,92 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
         EqFrac = SIIEqFrac
 
     return min(SIEqPressure, SIIEqPressure), eqStructure, EqFrac
+
+def equilibriumTemperature(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs):
+    compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])
+    for i in range(len(compounds)-1):
+        compoundData = numpy.append(compoundData, fluidProperties.loc[fluidProperties['Compound ID'] == compounds[i+1]], axis = 0)
+
+    PvapConsts = numpy.array(vaporPressureConstants.loc[vaporPressureConstants['Compound ID'] == compounds[0]])
+    for i in range(len(compounds)-1):
+        PvapConsts = numpy.append(PvapConsts, vaporPressureConstants.loc[vaporPressureConstants['Compound ID'] == compounds[i+1]], axis = 0)
+
+    #kiharaParameters = numpy.array(kiharaCellParameters.loc[kiharaCellParameters['Compound ID'] == compounds[0]])
+    #for i in range(len(compounds)-1):
+    #    kiharaParameters = numpy.append(kiharaParameters, kiharaCellParameters.loc[kiharaCellParameters['Compound ID'] == compounds[i+1]], axis = 0)
+    kiharaParameters = None
+
+    #Computational Algorithm
+    tGuess = temperature
+    if temperature > 260 and temperature < 280:
+        freezingPoint = 273.15+freezingPointDepression(compounds, temperature, PengRobinson(compoundData, moleFractions, 273.15, pressure)[2], compoundData, pressure, compoundData[:,7], saltConcs, inhibitorConcs)
+        if temperature > freezingPoint:
+            waterPhase = "liquid"
+        else:
+            waterPhase = "ice"
+    elif temperature <= 260:
+        waterPhase = "ice"
+    elif temperature >= 280:
+        waterPhase = "liquid"
+    
+    def f(pressure, tGuess):
+        vaporFugacities = PengRobinson(compoundData, moleFractions, tGuess, abs(pressure))[2]
+        f_w = waterFugacity(tGuess, pressure, waterPhase, vaporFugacities, compounds, compoundData)
+        f_h = hydrateFugacity(tGuess, pressure, localPvapConsts, structure, vaporFugacities, compounds, kiharaParameters, compoundData)[0]
+        return abs(f_h-f_w)
+      
+    structure = "I"
+    tGuess = temperature
+    mask = [0 for i in range(len(PvapConsts[:,0]))]
+    for i in range(len(PvapConsts[:,0])):
+        if sum(numpy.isin(element = PvapConsts[:,1],test_elements=PvapConsts[i,1])) > 1:
+            structureMask = numpy.isin(element = PvapConsts[:,0],test_elements="I")
+            componentMask = numpy.isin(element = PvapConsts[:,1],test_elements=PvapConsts[i,1])
+            mask[i] = numpy.logical_and(structureMask, componentMask)[i]
+        else:
+            mask[i] = True
+        
+    localPvapConsts = PvapConsts[mask]
+
+    try:
+        if "I" in PvapConsts[:,0]:
+            SIEqTemperature = abs(scipy.optimize.fsolve(f,pressure,xtol=errorMargin,args=tGuess)[0])
+            SIEqFrac = hydrateFugacity(SIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, tGuess, pressure)[2], compounds, kiharaParameters, compoundData)[1]
+        else:
+            raise
+    except:
+        SIEqTemperature = math.inf
+        SIEqFrac = [[0 for i in range(len(moleFractions))],[0 for i in range(len(moleFractions))]]
+    
+    tGuess = temperature
+    
+    structure = "II"
+    mask = [0 for i in range(len(PvapConsts[:,0]))]
+    for i in range(len(PvapConsts[:,0])):
+        if sum(numpy.isin(element = PvapConsts[:,1],test_elements=PvapConsts[i,1])) > 1:
+            structureMask = numpy.isin(element = PvapConsts[:,0],test_elements="II")
+            componentMask = numpy.isin(element = PvapConsts[:,1],test_elements=PvapConsts[i,1])
+            mask[i] = numpy.logical_and(structureMask, componentMask)[i]
+        else:
+            mask[i] = True
+        
+    localPvapConsts = PvapConsts[mask]
+        
+    try:
+        if "II" in PvapConsts[:,0]:
+            SIIEqTemperature = abs(scipy.optimize.fsolve(f,[pressure],xtol=errorMargin,args=tGuess)[0])
+            SIIEqFrac = hydrateFugacity(SIIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, tGuess, pressure)[2], compounds, kiharaParameters, compoundData)[1]
+        else:
+            raise
+    except:
+        SIIEqTemperature = math.inf
+        SIIEqFrac = [[0 for i in range(len(moleFractions))],[0 for i in range(len(moleFractions))]]
+    
+    if SIIEqTemperature >= SIEqTemperature:
+        eqStructure = "I"
+        EqFrac = SIEqFrac
+    else:
+        eqStructure = "II"
+        EqFrac = SIIEqFrac
+
+    return min(SIEqTemperature, SIIEqTemperature), eqStructure, EqFrac

@@ -1,3 +1,8 @@
-1. Added proper README.txt and requirements.txt files
-2. Added license information
-3. Fixed an issue where attempting to use automatic calculation of betaGas would return an error
+1. Fixed betaGas calculations
+2. Equilibrium temperature inhibition no longer occurs below the freezing point of water
+3. Added Celsius and Rankine temperature units
+4. Added bar and mmHg pressure units
+5. Allows user to select from preset betaGas types instead of numbers
+6. Added watermark onto graphs
+7. Shows user data without occupancy data but now allows for download of full data
+8. Commandline now correctly gives user option to automatically or manually determine betaGas

@@ -95,8 +95,12 @@ for i in range(len(T)):
     print("Occupancy: " + str(convergence[2]))
     
 #Calculate Inhibited Temperatures
+betaGas = simFunctions.betaGas(T, eqPressure)
+if betaGas == 0:
+    betaGas = float(input("betaGas calculation failed, please input new value (leave 0 to skip): "))
 TInhibited = [0 for i in range(len(T))]
 if freshWater != "Y":
+    betaGas = simFunctions.betaGas(T, eqPressure)
     for i in range(len(T)):
         TInhibited[i] = simFunctions.HuLeeSum(T[i], saltConcs, inhibitorConcs, betaGas)
 else:
