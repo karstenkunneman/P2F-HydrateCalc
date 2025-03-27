@@ -8,28 +8,56 @@ import time
 import math
 import csv
 
-usecsv = input("Import .csv file? (Y/N): ")
-if usecsv == "Y":
-    filename = input("File name: ")
-    guessFile = numpy.genfromtxt(filename, delimiter=',', skip_header=1)
-    T = guessFile[:,0]
-    P = guessFile[:,1]*1E6
-    noPoints = len(T)
-else:
-    noPoints = int(input("Number of Data Points: "))
-    if noPoints > 1:
-        minTemp = float(input("Lower Temperature (K): ")) #Temp in K
-        maxTemp = float(input("Upper Temperature (K): "))
-        minGuessPressure = float(input("Minimum Guess Pressure (MPa): "))*1E6 #Pressure in Pa
-        maxGuessPressure = float(input("Maximum Guess Pressure (MPa): "))*1E6 #Pressure in Pa
-        T = numpy.arange(maxTemp, minTemp-(maxTemp-minTemp)/noPoints, -1*(maxTemp-minTemp)/(noPoints-1))
-        logP = numpy.arange(math.log(maxGuessPressure), math.log(minGuessPressure)-(math.log(maxGuessPressure)-math.log(minGuessPressure))/noPoints, -1*(math.log(maxGuessPressure)-math.log(minGuessPressure))/(noPoints-1))
-        P = [0 for i in range(len(T))]
-        for i in range(len(logP)):
-            P[i] = round(math.exp(logP[i]), 2)
+speccedParameter = input("Specified parameter? (T/P): ")
+
+if speccedParameter == "T":
+    usecsv = input("Import .csv file? (Y/N): ")
+    if usecsv == "Y":
+        filename = input("File name: ")
+        guessFile = numpy.genfromtxt(filename, delimiter=',', skip_header=1)
+        T = guessFile[:,0]
+        P = guessFile[:,1]*1E6
+        noPoints = len(T)
     else:
-        T = [float(input("Temperature (K): "))]
-        P = [float(input("Guess Pressure (MPa): "))*1E6]
+        noPoints = int(input("Number of Data Points: "))
+        if noPoints > 1:
+            minTemp = float(input("Lower Temperature (K): ")) #Temp in K
+            maxTemp = float(input("Upper Temperature (K): "))
+            minGuessPressure = float(input("Minimum Guess Pressure (MPa): "))*1E6 #Pressure in Pa
+            maxGuessPressure = float(input("Maximum Guess Pressure (MPa): "))*1E6 #Pressure in Pa
+            T = numpy.arange(maxTemp, minTemp-(maxTemp-minTemp)/noPoints, -1*(maxTemp-minTemp)/(noPoints-1))
+            logP = numpy.arange(math.log(maxGuessPressure), math.log(minGuessPressure)-(math.log(maxGuessPressure)-math.log(minGuessPressure))/noPoints, -1*(math.log(maxGuessPressure)-math.log(minGuessPressure))/(noPoints-1))
+            P = [0 for i in range(len(T))]
+            for i in range(len(logP)):
+                P[i] = round(math.exp(logP[i]), 2)
+        else:
+            T = [float(input("Temperature (K): "))]
+            P = [float(input("Guess Pressure (MPa): "))*1E6]
+elif speccedParameter == "P":
+    usecsv = input("Import .csv file? (Y/N): ")
+    if usecsv == "Y":
+        filename = input("File name: ")
+        guessFile = numpy.genfromtxt(filename, delimiter=',', skip_header=1)
+        T = guessFile[:,0]
+        P = guessFile[:,1]*1E6
+        noPoints = len(T)
+    else:
+        noPoints = int(input("Number of Data Points: "))
+        if noPoints > 1:
+            minPressure = float(input("Lower Pressure (MPa): "))*1E6
+            maxPressure = float(input("Upper Pressure (MPa): "))*1E6
+            minGuessTemp = float(input("Minimum Guess Temperature (K): "))
+            maxGuessTemp = float(input("Maximum Guess Temperature (K): "))
+            P = numpy.arange(maxPressure, minPressure-(maxPressure-minPressure)/noPoints, -1*(maxPressure-minPressure)/(noPoints-1))
+            expT = numpy.arange(math.exp(maxGuessTemp), math.exp(minGuessTemp)-(math.exp(maxGuessTemp)-math.exp(minGuessTemp))/noPoints, -1*(math.exp(maxGuessTemp)-math.exp(minGuessTemp))/(noPoints-1))
+            T = [0 for i in range(len(expT))]
+            for i in range(len(expT)):
+                T[i] = round(math.log(expT[i]), 2)
+        else:
+            T = [float(input("Temperature (K): "))]
+            P = [float(input("Guess Pressure (MPa): "))*1E6]
+else:
+    quit("Specified parameter not valid")
 
 exportFileName = input("Export File Name (do not include .csv): ") + ".csv"
 
@@ -81,18 +109,37 @@ else:
         
 print("Calculating...")
 startTime = time.time()
-eqPressure = numpy.array([0 for i in range(len(T))],dtype=float)
 eqStructure = [0 for i in range(len(T))]
 eqOccupancy = [0 for i in range(len(T))],[0 for i in range(len(T))]
+hydrationNumber = [0 for i in range(len(T))]
+hydrateDensity = [0 for i in range(len(T))]
 
-for i in range(len(T)):
-    convergence = simFunctions.equilibriumPressure(T[i], P[i], components, moleFractions, saltConcs, inhibitorConcs)
-    eqPressure[i] = convergence[0]/1E6 #In MPa
-    eqStructure[i] = convergence[1]
-    eqOccupancy[0][i] = convergence[2][0]
-    eqOccupancy[1][i] = convergence[2][1]
-    print("Temperature " + str(i + 1) + " convergence point reached with a Structure " + convergence[1] + " hydrate.")
-    print("Occupancy: " + str(convergence[2]))
+if speccedParameter == "T":
+    eqPressure = numpy.array([0 for i in range(len(T))],dtype=float)
+    for i in range(len(T)):
+        convergence = simFunctions.equilibriumPressure(T[i], P[i], components, moleFractions, saltConcs, inhibitorConcs)
+        eqPressure[i] = convergence[0]/1E6 #In MPa
+        eqStructure[i] = convergence[1]
+        eqOccupancy[0][i] = convergence[2][0]
+        eqOccupancy[1][i] = convergence[2][1]
+        hydrationNumber[i] = convergence[3]
+        hydrateDensity[i] = convergence[4]
+        print("Temperature " + str(i + 1) + " convergence point reached with a Structure " + convergence[1] + " hydrate.")
+        print("Occupancy: " + str(convergence[2]))
+elif speccedParameter == "P":
+    eqTemperature = numpy.array([0 for i in range(len(P))],dtype=float)
+    for i in range(len(P)):
+        convergence = simFunctions.equilibriumTemperature(T[i], P[i], components, moleFractions, saltConcs, inhibitorConcs)
+        eqTemperature[i] = convergence[0]/1E6 #In K
+        eqStructure[i] = convergence[1]
+        eqOccupancy[0][i] = convergence[2][0]
+        eqOccupancy[1][i] = convergence[2][1]
+        hydrationNumber[i] = convergence[3]
+        hydrateDensity[i] = convergence[4]
+        print("Pressure " + str(i + 1) + " convergence point reached with a Structure " + convergence[1] + " hydrate.")
+        print("Occupancy: " + str(convergence[2]))
+    eqPressure = P
+    T = eqTemperature
     
 #Calculate Inhibited Temperatures
 betaGas = simFunctions.betaGas(T, eqPressure)
@@ -112,8 +159,8 @@ print("Time to Complete Calculation: " + str(round(endTime-startTime, 3)) + " se
 print("per Data Point: " + str(round((endTime-startTime)/noPoints, 3)) + " seconds")
 
 with open(exportFileName, mode = 'w', newline='') as file:
-    data = [['T (K)', 'T Inhibited (K) (If Applicable)', 'P (MPa)', 'Structure', 'Small Cage Occupancy', 'Large Cage Occupancy']]
+    data = [['T (K)', 'T Inhibited (K) (If Applicable)', 'P (MPa)', 'Structure', 'Small Cage Occupancy', 'Large Cage Occupancy', 'Hydration Number', 'Hydrate Density (kg/m3)']]
     for i in range(noPoints):
-        data.append([T[i], TInhibited[i], eqPressure[i], eqStructure[i], eqOccupancy[0][i], eqOccupancy[1][i]])
+        data.append([T[i], TInhibited[i], eqPressure[i], eqStructure[i], eqOccupancy[0][i], eqOccupancy[1][i], hydrationNumber[i], hydrateDensity[i]])
     writer = csv.writer(file)
     writer.writerows(data)
