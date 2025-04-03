@@ -12,47 +12,26 @@ errorMargin = 1E-9
 fluidProperties = pandas.read_excel('Data.xlsx', sheet_name='Fluid Properties')
 
 #filename = input("Equilibrium Data File name: ")
-filename = 'H2S Data.csv'
+filename = 'O2 Data.csv'
 guessFile = pandas.read_csv(filename)
 temperatures = guessFile["T (K)"].tolist()
 pressures = guessFile["P (Mpa)"].tolist()
 for i in range(len(pressures)):
     pressures[i]*=1E6
 structures = guessFile["Structure"].tolist()
-smallFrac = guessFile["Small Cage Occupancy"].tolist()
-largeFrac = guessFile["Large Cage Occupancy"].tolist()
 
-'''
-compoundData = [0, 0, float(input("Critical Temperature(K): ")),
-                float(input("Critical Pressure(MPa): ")),
-                float(input("Accentric Factor: ")),
-                float(input("PRSK κ1 Value (Optional): ")), 0,
-                input("Chemgroup: "),
-                float(input("Ionization Potential (eV): ")),
-                float(input("Polarizability (Å^3): "))]
-H = [float(input("1st Henry's Law Parameter: ")),
-     float(input("2nd Henry's Law Parameter: ")),
-     float(input("3rd Henry's Law Parameter: ")),
-     float(input("4th Henry's Law Parameter: "))]
-#TODO: Figure out a better way to do this
-pvapConsts = [float(input("1st Empty Hydrate Vapor Pressure Constant: ")),
-     float(input("2nd Empty Hydrate Vapor Pressure Constant: ")),
-     float(input("3rd Empty Hydrate Vapor Pressure Constant: ")),
-     float(input("4th Empty Hydrate Vapor Pressure Constant: "))]
-'''
+compoundData = [[9, "O2", float(154.581), float(5.043), float(0.0222),
+                float(.01512), 0,
+                numpy.array(['{119: 1}'], dtype=object),
+                float(12.070),
+                float(1.562), float(15.999)]]
 
-compoundData = [[9, "H2S", float(373.1), float(9.0), float(0.1),
-                float(0), 0,
-                numpy.array(['{114: 1}'], dtype=object),
-                float(10.457),
-                float(3.78)]]
+H = [-286.942, 15450.6, 36.5593, 0.0187662]
 
-H = [-149.551, 8227.328, 20.2327, 0.00129]
-
-pvapConsts = [4.6446,
-     -5150.369,
+pvapConsts = [4.69009416,
+     -5354.380735,
      2.778907444,
-     -0.0087553]
+     -0.009325515]
 
 def Z(compoundData, T, P):
     waterData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == 0])[0]
@@ -139,7 +118,7 @@ def getLangConst(T, P, compoundData, structure, i):
     
     
     frac = [[0],[0]]
-    '''
+    
     def f(frac1):
         if frac1 >=1:
             frac1 = 0.9999999
@@ -148,11 +127,11 @@ def getLangConst(T, P, compoundData, structure, i):
         return abs(dH - dHexpected)
     
     frac[1][0] = scipy.optimize.minimize(f, 0.984, bounds=[(0,0.9999999)]).x
-    frac[0][0] = 0 #1-math.exp((dH-nu2*math.log(1-frac[1][0]))/nu1)
-    '''
+    frac[0][0] = 1-math.exp((dH-nu2*math.log(1-frac[1][0]))/nu1)
     
-    frac[1][0] = largeFrac[i]
-    frac[0][0] = smallFrac[i]
+    
+    #frac[1][0] = largeFrac[i]
+    #frac[0][0] = smallFrac[i]
     
     Cgg = simFunctions.Lang_GG_Const(T, compoundData, frac, structure)
     Cml = [0,0]

@@ -1,3 +1,7 @@
-1. Reduced the size and changed the position of the graph watermark on the webapp to be less obnoxious
-2. Implemented equilibrium temperature calculation given pressure for webapp and commandline
-3. Webapp and commandline now also provide information on the hydration number and density of the hydrate at each point
+1. Fixed an issue on the commandline program that would cause the calculation time to continue if the betaGas calculation fails and the user is prompted for manual input
+2. Fixed an issue on the commandline program that would give T and P values of incorrect orders of magnitude when obtaining equilibrium Temperatures
+3. Fixed temperature rounding on both the commandline program and web app
+4. Fixed numerous issues with equilibrium temperature calculations on both commandline and webapp programs, both should be working as intended
+5. Implemented functionality for the commandline to handle nonuniform composition calculations
+6. Fixed a bug where the inhibited temperature may not round correctly
+7. Commandline will now round occupancies to 4 decimals

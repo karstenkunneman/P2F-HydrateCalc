@@ -23,7 +23,7 @@ saltData = pandas.read_excel('Data.xlsx', sheet_name='Salts Data').to_numpy()
 inhibitorData = pandas.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
 #Constants
-errorMargin = 1E-5
+errorMargin = 1E-9
 R = 8.31446261815324 #m^3 Pa/mol K
 boltzmannConstant = 1.380649E-23 #m^2 kg/s^2 K
 

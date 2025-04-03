@@ -71,17 +71,18 @@ if programType == "Equilibrium Calculator":
                         minGuessPressure = float(st.text_input("Minimum Guess Pressure ("+pressureUnit+"): ", 0.089))
                     with c2:
                         maxGuessPressure = float(st.text_input("Maximum Guess Pressure ("+pressureUnit+"): ", 74.291))
-                else:
-                    for i in range(len(T)):
-                        T[i] = simFunctions.tempConversion(tempUnit, T[i], False)
-                    minGuessPressure = simFunctions.guessPressure(components, moleFractions, T[len(T)-1])
-                    maxGuessPressure = simFunctions.guessPressure(components, moleFractions, T[0])
 
                     logP = numpy.arange(math.log(maxGuessPressure), math.log(minGuessPressure)-(math.log(maxGuessPressure)-math.log(minGuessPressure))/noPoints, -1*(math.log(maxGuessPressure)-math.log(minGuessPressure))/(noPoints-1))
                     P = [0 for i in range(len(T))]
                     for i in range(len(logP)):
                         T[i] = round(T[i], 2)
                         P[i] = math.exp(logP[i])
+                else:
+                    P = [0 for i in range(len(T))]
+                    for i in range(len(T)):
+                        T[i] = simFunctions.tempConversion(tempUnit, T[i], False)
+                        P[i] = simFunctions.guessPressure(components, moleFractions, T[i])
+
             else:
                 c1, c2 = st.columns(2)
                 with c1:
@@ -90,7 +91,6 @@ if programType == "Equilibrium Calculator":
                     maxPressure = float(st.text_input('Maximum Pressure ('+pressureUnit+')', 74.291))
                 noPoints = st.number_input('Number of Points', 1, None, 4, 1)
                 P = numpy.arange(maxPressure, minPressure-(maxPressure-minPressure)/noPoints, -1*(maxPressure-minPressure)/(noPoints-1))
-                P = [round(i, 1) for i in P]
 
                 if userGuess == True:
                     c1, c2 = st.columns(2)
@@ -98,16 +98,17 @@ if programType == "Equilibrium Calculator":
                         minGuessTemp = float(st.text_input("Minimum Guess Temperature ("+tempUnit+"): ",190.15))
                     with c2:
                         maxGuessTemp = float(st.text_input("Maximum Guess Pressure ("+tempUnit+"): ", 302.1))
-                else:
-                    for i in range(len(P)):
-                        P[i] = simFunctions.pressureConversion(tempUnit, P[i], False)
-                    minGuessTemp = simFunctions.guessTemp(components, moleFractions, P[len(P)-1])
-                    maxGuessTemp = simFunctions.guessTemp(components, moleFractions, P[0])
 
-                    expT = numpy.arange(math.exp(maxGuessTemp), math.exp(minGuessTemp)-(math.exp(maxGuessTemp)-math.exp(minGuessTemp))/noPoints, -1*(math.exp(maxGuessTemp)-math.exp(minGuessTemp))/(noPoints-1))
+                    P = numpy.arange(maxPressure, minPressure-(maxPressure-minPressure)/noPoints, -1*(maxPressure-minPressure)/(noPoints-1))
+                    expT = numpy.arange(math.exp(maxGuessTemp/100), math.exp(minGuessTemp/100)-(math.exp(maxGuessTemp/100)-math.exp(minGuessTemp/100))/noPoints, -1*(math.exp(maxGuessTemp/100)-math.exp(minGuessTemp/100))/(noPoints-1))
                     T = [0 for i in range(len(expT))]
                     for i in range(len(expT)):
-                        T[i] = round(math.log(expT[i]), 2)
+                        T[i] = round(math.log(expT[i]), 2)*100
+                else:
+                    T = [0 for i in range(len(P))]
+                    for i in range(len(P)):
+                        P[i] = simFunctions.pressureConversion(tempUnit, P[i], False)
+                        T[i] = simFunctions.guessTemp(components, moleFractions, P[i]*1E6)
 
         else:
             if definedVariable == "T":
@@ -183,7 +184,7 @@ if programType == "Equilibrium Calculator":
                         simResult = simFunctions.equilibriumPressure(T[i], P[i], components, moleFractions, saltConcs, inhibitorConcs)
                         eqPressure[i] = simResult[0]
                     elif definedVariable == "P":
-                        simResult = simFunctions.equilibriumTemperature(T[i], P[i], components, moleFractions, saltConcs, inhibitorConcs)
+                        simResult = simFunctions.equilibriumTemperature(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
                         eqTemperature[i] = simResult[0]
                     eqStructure[i] = simResult[1]
                     eqFractions[i] = [[round(float(simResult[2][0][j]), 4) for j in range(len(simResult[2][0]))], [round(float(simResult[2][1][j]), 4) for j in range(len(simResult[2][1]))]]
@@ -195,11 +196,6 @@ if programType == "Equilibrium Calculator":
                     betaGas = simFunctions.betaGas(T, eqPressure)
                 elif definedVariable == "P":
                     betaGas = simFunctions.betaGas(eqTemperature, P)
-                for i in range(len(T)):
-                    if freshWater == False:
-                        TInhibited[i] = simFunctions.HuLeeSum(T[i], saltConcs, inhibitorConcs, betaGas)
-                    else:
-                        TInhibited[i] = T[i]
                 eqFractions = numpy.array(eqFractions)
 
                 fig, ax = plt.subplots()
@@ -211,12 +207,19 @@ if programType == "Equilibrium Calculator":
                     for i in range(len(T)):
                         eqPressure[i] = simFunctions.pressureConversion(pressureUnit, eqPressure[i], True)
                     "{:.2e}".format(eqPressure[i])
-                    plt.plot(T, eqPressure, '-', label='Fresh Water')
+                    P = eqPressure
                 elif definedVariable == "P":
                     for i in range(len(P)):
                         eqTemperature[i] = simFunctions.tempConversion(tempUnit, eqTemperature[i], True)
                         eqTemperature[i] = round(eqTemperature[i], 1)
-                    plt.plot(eqTemperature, P, '-', label='Fresh Water')
+                        T = eqTemperature
+                plt.plot(T, P, '-', label='Fresh Water')
+                
+                for i in range(len(T)):
+                    if freshWater == False:
+                        TInhibited[i] = round(simFunctions.HuLeeSum(T[i], saltConcs, inhibitorConcs, betaGas), 1)
+                    else:
+                        TInhibited[i] = round(T[i], 1)
                 
                 if freshWater == False:
                     if definedVariable == "T":
