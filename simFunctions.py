@@ -15,8 +15,8 @@ warnings.filterwarnings("ignore")
 
 #Extract data from excel files
 fluidProperties = pandas.read_excel('Data.xlsx', sheet_name='Fluid Properties')
+guessConstants = pandas.read_excel('Data.xlsx', sheet_name='Guess Constants')
 hydrateCellProperties = pandas.read_excel('Data.xlsx', sheet_name='Hydrate Cell Properties')
-#kiharaCellParameters = pandas.read_excel('Data.xlsx', sheet_name='Kihara Cell Parameters')
 vaporPressureConstants = pandas.read_excel('Data.xlsx', sheet_name='Vapor Pressure Constants')
 mixConstants = pandas.read_excel('Data.xlsx', sheet_name='Binary Interaction Parameters')
 saltData = pandas.read_excel('Data.xlsx', sheet_name='Salts Data').to_numpy()
@@ -455,84 +455,101 @@ def betaGas(temperatures, pressures):
 
     except:
         betaGas = 0
-
+        
     return betaGas
 
-def tempConversion(tempUnit, T, isInverted):
-    if isInverted == False:
+def tempConversion(tempUnit, T, toK):
+    if toK == False:
         if tempUnit == "K":
             T = T
         elif tempUnit == "°C":
             T = T - 273.15
         elif tempUnit == "°F":
-            T = (T-32)/1.8 + 273.15
-        elif tempUnit == "R":
-            T = T/1.8
+            T = (T-273.15)*1.8 + 32
     else:
         if tempUnit == "K":
             T = T
         elif tempUnit == "°C":
             T = T + 273.15
         elif tempUnit == "°F":
-            T = (T-273.15)*1.8 + 32
-        elif tempUnit == "R":
-            T = T*1.8
+            T = (T-32)/1.8 + 273.15
     return T
     
-def pressureConversion(pressureUnit, P, isInverted):
-    if isInverted == False:
-        if pressureUnit == "MPa":
-            P = P
-        elif pressureUnit == "psia":
-            P /= 145.038
-        elif pressureUnit == "bar":
-            P /= 10
-        elif pressureUnit == "mmHg":
-            P /= 7500.62
-        #P *= 1E6 #MPa to Pa
-    else:
-        P /= 1E6 #Pa to MPa   
+def pressureConversion(pressureUnit, P, toMPa):
+    if toMPa == False:
         if pressureUnit == "MPa":
             P = P
         elif pressureUnit == "psia":
             P *= 145.038
         elif pressureUnit == "bar":
             P *= 10
-        elif pressureUnit == "mmHg":
-            P *= 7500.62
+    else: 
+        if pressureUnit == "MPa":
+            P = P
+        elif pressureUnit == "psia":
+            P /= 145.038
+        elif pressureUnit == "bar":
+            P /= 10
     return P
 
 def guessPressure(compounds, moleFractions, T):
-    compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])
+    guessConsts = numpy.array(guessConstants.loc[guessConstants['Compound ID'] == compounds[0]])
     for i in range(len(compounds)-1):
-        compoundData = numpy.append(compoundData, fluidProperties.loc[fluidProperties['Compound ID'] == compounds[i+1]], axis = 0)
+        guessConsts = numpy.append(guessConsts, guessConstants.loc[guessConstants['Compound ID'] == compounds[i+1]], axis = 0)
 
-    pressureConstant = 0
-    for i in range(len(compoundData)):
-        pressureConstant += moleFractions[i]*compoundData[i][6]
-    
-    guessPressure = math.exp(pressureConstant*T)
-    return guessPressure
+    if T < 273.15:
+        constantA = 0
+        constantB = 0
+        for i in range(len(guessConsts)):
+            constantA += moleFractions[i]*guessConsts[i][2]
+            constantB += moleFractions[i]*guessConsts[i][3]
+        
+        guessPressure = constantA*math.exp(constantB*T)
+        return guessPressure
+    else:
+        constantA = 0
+        constantB = 0
+        for i in range(len(guessConsts)):
+            constantA += moleFractions[i]*guessConsts[i][4]
+            constantB += moleFractions[i]*guessConsts[i][5]
+        
+        guessPressure = constantA*math.exp(constantB*T)
+        return guessPressure
 
 def guessTemp(compounds, moleFractions, P):
-    compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])
+    guessConsts = numpy.array(guessConstants.loc[guessConstants['Compound ID'] == compounds[0]])
     for i in range(len(compounds)-1):
-        compoundData = numpy.append(compoundData, fluidProperties.loc[fluidProperties['Compound ID'] == compounds[i+1]], axis = 0)
+        guessConsts = numpy.append(guessConsts, guessConstants.loc[guessConstants['Compound ID'] == compounds[i+1]], axis = 0)
 
-    pressureConstant = 0
-    for i in range(len(compoundData)):
-        pressureConstant += moleFractions[i]*compoundData[i][6]
+    constantA = 0
+    constantB = 0
+    for i in range(len(guessConsts)):
+        constantA += moleFractions[i]*guessConsts[i][2]
+        constantB += moleFractions[i]*guessConsts[i][3]
     
-    guessTemp = math.log(P)/pressureConstant
+    guessTemp = math.log(P/constantA)/constantB
+
+    if guessTemp >= 273.15:
+        constantA = 0
+        constantB = 0
+        for i in range(len(guessConsts)):
+            constantA += moleFractions[i]*guessConsts[i][4]
+            constantB += moleFractions[i]*guessConsts[i][5]
+    
+    guessTemp = math.log(P/constantA)/constantB
+
     return guessTemp
 
 def hydrationNumber(structure, occupancies):
-    if structure == "I":
-        hydrationNumber = 46/(sum(occupancies[0])*2+sum(occupancies[1])*6)
+    if sum(occupancies[0] + occupancies[1]) != 0:
+        if structure == "I":
+            hydrationNumber = 46/(sum(occupancies[0])*2+sum(occupancies[1])*6)
+        else:
+            hydrationNumber = 136/(sum(occupancies[0])*16+sum(occupancies[1])*8)
+        
+        return round(hydrationNumber, 2)
     else:
-        hydrationNumber = 136/(sum(occupancies[0])*16+sum(occupancies[1])*8)
-    
-    return round(hydrationNumber, 2)
+        return None
 
 def hydrateDensity(structure, occupancies, compoundData, moleFractions, T, P):
     N_A = 6.022E23
@@ -669,8 +686,8 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
     
     def f(tGuess, pressure):
         vaporFugacities = PengRobinson(compoundData, moleFractions, abs(tGuess), pressure)[2]
-        f_w = waterFugacity(tGuess, pressure, waterPhase, vaporFugacities, compounds, compoundData)
-        f_h = hydrateFugacity(tGuess, pressure, localPvapConsts, structure, vaporFugacities, compounds, kiharaParameters, compoundData)[0]
+        f_w = waterFugacity(abs(tGuess), pressure, waterPhase, vaporFugacities, compounds, compoundData)
+        f_h = hydrateFugacity(abs(tGuess), pressure, localPvapConsts, structure, vaporFugacities, compounds, kiharaParameters, compoundData)[0]
         return abs(f_h-f_w)
       
     structure = "I"
@@ -727,6 +744,9 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
         eqStructure = "II"
         EqFrac = SIIEqFrac
 
-    eqTemperature = min(SIEqTemperature, SIIEqTemperature)
+    if SIEqTemperature != math.inf and SIIEqTemperature != math.inf:
+        eqTemperature = min(SIEqTemperature, SIIEqTemperature)
+    else:
+        eqTemperature = math.inf
 
     return eqTemperature, eqStructure, EqFrac, hydrationNumber(eqStructure, EqFrac), hydrateDensity(eqStructure, EqFrac, compoundData, moleFractions, eqTemperature, pressure)

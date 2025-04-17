@@ -21,7 +21,6 @@ for i in range(len(pressures)):
 structures = guessFile["Structure"].tolist()
 smallFrac = guessFile["Small Cage"].tolist()
 largeFrac = guessFile["Large Cage"].tolist()
-
 '''
 compoundData = [[10, "H2S", float(373.1), float(9), float(0.1005),
                 float(0), 0,
@@ -31,9 +30,9 @@ compoundData = [[10, "H2S", float(373.1), float(9), float(0.1005),
 
 H = [-149.551, 8227.328, 20.2327, 0.00129]
 
-pvapConsts = [4.6446, -5150.369, 2.778907444, -0.0087553]
+LangmuirParameters = [[-26.33120006, 3822.514824, -45381.84691], [-26.92192792, 7358.818357, -237581.8488]]'''
 
-'''
+
 compoundData = [[9, "O2", float(154.581), float(5.043), float(.0222),
                 float(0.01512), 0,
                 numpy.array(['{119: 1}'], dtype=object),
@@ -42,7 +41,7 @@ compoundData = [[9, "O2", float(154.581), float(5.043), float(.0222),
 
 H = [-286.942, 15450.6, 36.5593, 0.0187662]
 
-pvapConsts = [4.69009416, -5354.380735, 2.778907444, -0.009345515]
+LangmuirParameters = [[-22.97258845, 2499.223241, 0], [-20.61595609, 2033.604317, 0]]
 
 def Z(compoundData, T, P):
     waterData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == 0])[0]
@@ -84,9 +83,11 @@ def freezingPointDepression(T, fug_vap, compoundData, P, chemGroups):
     deltadT = R*(273.15)**2/6011*math.log(liqPhaseComposition(T, fug_vap, compoundData, P, Psat)[0]*activityCoeff(T, phaseComposition, chemGroups))
     return deltadT
 
-def getLangConst(T, P, compoundData, structure, i):
+def GetHydratePVap(T, P, fractions, i):
+    structure = structures[i]
+    
     fug_vap = simFunctions.PengRobinson(compoundData, [1], T, P)[2][0]
-
+    
     if T > 260 and T < 280:
         freezingPoint = 273.15+freezingPointDepression(T, fug_vap, compoundData, P, compoundData[0][7])
         if T > freezingPoint:
@@ -98,7 +99,6 @@ def getLangConst(T, P, compoundData, structure, i):
     elif T >= 280:
         phase = "liquid"
     
-    #Water Fugacity Calculation
     if phase == "ice":
         Vm_water = 1.912E-5 + T*8.387E-10 + (T**2)*4.016E-12
         Psat_water = math.exp(4.6056*math.log(T)-5501.1243/T+2.9446-T*8.1431E-3)
@@ -109,74 +109,38 @@ def getLangConst(T, P, compoundData, structure, i):
         Psat_water = math.exp(4.1539*math.log(T)-5500.9332/T+7.6537-16.1277E-3*T)
         phaseComposition = liqPhaseComposition(T, fug_vap, compoundData, P, Psat_water)
         f_w = phaseComposition[0]*activityCoeff(T, phaseComposition, chemGroups)*Psat_water*math.exp(Vm_water*(P-Psat_water)/(R*T))
-    
-    #Get dH from water fugacity
-    N_A = 6.022E23
-    if structure == "I":
-        Vm_hydrate = (11.835+2.217E-5*T+2.242E-6*T**2)**3*(1E-30*N_A/46)-8.006E-9*P/1E6+5.448E-12*(P/1E6)**2
-    elif structure == "II":
-        Vm_hydrate = (17.13+2.249E-4*T+2.013E-6*T**2-1.009E-9*T**3)**3*(1E-30*N_A/136)-8.006E-9*P/1E6+5.448E-12*(P/1E6)**2
-    Psat_hydrate = math.exp(pvapConsts[0]*math.log(T)+pvapConsts[1]/T+pvapConsts[2]+pvapConsts[3]*T)
-    
-    dH = math.log(f_w/(Psat_hydrate*math.exp(Vm_hydrate*(P-Psat_hydrate)/(R*T))))
-    
-    if structure == "I":
-        nu1 = 0.043478261
-        nu2 = 0.130434783
-    if structure == "II":
-        nu1 = 0.117647059
-        nu2 = 0.058823529
-    
-    frac = [[smallFrac[i]],[largeFrac[i]]]
-    
-    #frac = [[0],[0]]
-    
-    #def f(frac1):
-    #    if frac1 >=1:
-    #        frac1 = 0.9999999
-    #    frac0 = 0 #1-math.exp((dH-nu2*math.log(1-frac1))/nu1)
-    #    dHexpected = nu1*math.log(1-frac0) + nu2*math.log(1-frac1)
-    #    return abs(dH - dHexpected)
-    
-    #frac[1][0] = scipy.optimize.minimize(f, 0.984, bounds=[(0,0.9999999)]).x
-    #frac[0][0] = 1-math.exp((dH-nu2*math.log(1-frac[1][0]))/nu1)
-    
-    
-    #frac[1][0] = largeFrac[i]
-    #frac[0][0] = smallFrac[i]
-    
-    Cgg = simFunctions.Lang_GG_Const(T, compoundData, frac, structure)
-    Cml = [0,0]
-    for i in range(2):
-        Cml[i] = frac[i][0]/(Cgg[0][i]*fug_vap*(1-frac[i][0]))
-        if Cml [i] < 0:
-            Cml [i] = 0
-    
-    return Cml
+        
 
-def generateParameters(T, lang_consts):
+    cellProperties = simFunctions.getHydrateCellProperties(structure) 
+    Deltamu_H_w = 0
+    
+    Deltamu_H_w += cellProperties[0][10]*math.log(1-fractions[0][i])
+    Deltamu_H_w += cellProperties[1][10]*math.log(1-fractions[1][i])
+    
+    def func(Psat_hydrateGuest):
+        return f_w - Psat_hydrateGuest*math.exp(Vm_water*(P-Psat_hydrateGuest)/(R*T))*math.exp(Deltamu_H_w)
+    
+    Psat = scipy.optimize.fsolve(func, [7.5766])
+    return Psat
+    
+def generateParameters(T, PVaps):
     def model(x, A, B, D):
-        return numpy.exp(A+B/x+D/x/x)
+        return numpy.exp(A*numpy.log(x)+B/x+2.7789+D*x)
     
-    initialGuess = [-19.6865, 870.0524, -14208.0553] #Completely arbitrary, based on existing values
-    
-    A, B, D = scipy.optimize.curve_fit(model, numpy.array(T).flatten(), numpy.array(lang_consts).flatten(), p0=initialGuess)[0]
+    initialGuess = [4.6446, -5150.369, -0.0087553]
+    A, B, D = scipy.optimize.curve_fit(model, numpy.array(T).flatten(), numpy.array(PVaps).flatten(), p0=initialGuess)[0]
     return A, B, D
 
-#Logic Begins Here
-Cml = [[0 for i in range(len(temperatures))],[0 for i in range(len(temperatures))]]
+T = temperatures[i]
+P = pressures[i]
+fracs= [smallFrac,largeFrac]
+pVaps = [0 for i in range(len(temperatures))]
 for i in range(len(temperatures)):
-    consts = getLangConst(temperatures[i], pressures[i], compoundData, structures[i], i)
-    Cml[0][i] = consts[0]
-    Cml[1][i] = consts[1]
-
-A1, B1, D1 = generateParameters(temperatures, Cml[:][0])
-A2, B2, D2 = generateParameters(temperatures, Cml[:][1])
-
-print("Langmuir Constant Parameter Fit:")
-print("A1: " + str(A1))
-print("B1: " + str(B1))
-print("D1: " + str(D1))
-print("A2: " + str(A2))
-print("B2: " + str(B2))
-print("D2: " + str(D2))
+    pVaps[i] = float(GetHydratePVap(temperatures[i], pressures[i], fracs, i)[0])
+    
+pVaps = pVaps
+    
+A, B, D = generateParameters(temperatures, pVaps)
+print("A: " + str(A))
+print("B: " + str(B))
+print("D: " + str(D))
