@@ -239,7 +239,7 @@ if programType == "Equilibrium Calculation":
                     elif definedVariable == "P":
                         plt.plot([val for val, condition in zip(TInhibited, TInhibited) if condition is not None], [val for val, condition in zip(P, TInhibited) if condition is not None], '--', label='Inhibited System')
                     plt.legend(prop={'family': 'Arial'})
-                plt.yscale("log")
+                #plt.yscale("log")
                 plt.xlabel("Temperature ("+tempUnit+")", **{'fontname':'Arial'}, fontsize = 14)
                 plt.ylabel("Pressure ("+pressureUnit+")", **{'fontname':'Arial'}, fontsize = 14)
                 plt.xticks(**{'fontname':'Arial'}, fontsize = 14)
@@ -283,7 +283,7 @@ if programType == "Equilibrium Calculation":
                         TInhibited[i] = round(simFunctions.tempConversion(tempUnit, TInhibited[i], True), 1)
                     eqPressure[i] = simFunctions.pressureConversion(pressureUnit, eqPressure[i], True)
                     if eqPressure[i] < 1 or eqPressure[i] >= 10:
-                        eqPressure[i] = f"{eqPressure[i]:.2e}"
+                        eqPressure[i] = f"{eqPressure[i]:.2f}"
                     else:
                         eqPressure[i] = round(eqPressure[i], 2)
                     eqTemperature[i] = simFunctions.tempConversion(tempUnit, eqTemperature[i], True)
