@@ -9,7 +9,7 @@ curve can also be estimated).
 
 This tool is based primarily on the following models:
  - Phase behavior of clathrate hydrates: a model for single and multiple gas component hydrates
-   by J. B. Klauda and S. I. Sandler [doi: 10.1021/ie000322b ]
+   by J. B. Klauda and S. I. Sandler [doi: 10.1021/ie000322b]
  - Universal correlation for gas hydrates suppression temperature of inhibited systems: III. salts and 
    organic inhibitors by Y. Hu, J.-H. Sa, B. R. Lee, and A. K. Sum [doi: 10.1002/aic.16369]
 
