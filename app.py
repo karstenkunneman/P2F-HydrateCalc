@@ -344,8 +344,8 @@ elif programType == "Minimum Concentration Calculation":
 
 st.header('Credits')
 st.markdown('''
-            Developed by Karsten Kunneman in collaboration with Prof. Amadeu K. Sum at the Colorado School of Mines \n
-            Hydrate model: Klauda-Sandler fugacity model (doi 10.1021/ie000322b) \n
-            Inhibhition model: HLS correlation (doi 10.1002/aic.16369)
+            Developed by Karsten Kunneman in collaboration with Prof. Amadeu K. Sum at the Colorado School of Mines
+            \nHydrate model: Klauda-Sandler fugacity model [doi 10.1021/ie000322b]
+            \nInhibhition model: HLS correlation [doi 10.1002/aic.16369]
             \nThis site created with Streamlit''')
 st.markdown(f'''<a href="https://github.com/karstenkunneman/Gas-Hydrate-Equilibrium-Calculator">Github Repo</a>''', unsafe_allow_html=True)
