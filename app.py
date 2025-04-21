@@ -15,7 +15,7 @@ componentList = []
 for i in range(len(IDs)):
     componentList.append(compounds[i])
 
-st.title('Phases to Flow :: Gas Hydrate Equilibrium Prediction Calculator')
+st.title('Phases to Flow Lab :: Gas Hydrate Equilibrium Predictions Calculator')
 st.caption('Version 2025-04-16')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
@@ -245,7 +245,7 @@ if programType == "Equilibrium Calculation":
                 plt.xticks(**{'fontname':'Arial'}, fontsize = 14)
                 plt.yticks(**{'fontname':'Arial'}, fontsize = 14)
 
-                plt.text(0.95, 0.05, "Phases to Flow Research Group", transform=ax.transAxes, fontsize=10, color='gray', alpha=0.8, ha='right', va='bottom', fontweight='bold')
+                plt.text(0.95, 0.05, "P2F Lab", transform=ax.transAxes, fontsize=10, color='gray', alpha=0.8, ha='right', va='bottom', fontweight='bold')
                 
                 plt.tick_params(axis='both', which='both', direction='in')
                 st.pyplot(fig)
