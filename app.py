@@ -15,12 +15,12 @@ componentList = []
 for i in range(len(IDs)):
     componentList.append(compounds[i])
 
-st.title('Gas Hydrate Equilibrium Calculator')
+st.title('Phases to Flow :: Gas Hydrate Equilibrium Prediction Calculator')
 st.caption('Version 2025-04-16')
 
-programType = st.radio("Calculation Type", ["Equilibrium Calculator", "Minimum Concentration Calculator"], horizontal=True)
+programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
-if programType == "Equilibrium Calculator":
+if programType == "Equilibrium Calculation":
     #Mole Fraction Input Table
     components = []
     moleFractions = []
@@ -52,7 +52,7 @@ if programType == "Equilibrium Calculator":
 
     #If no input file given, take inputs from user through UI
     if csvGuesses == None:
-        calculateRange = st.toggle('Calculate Range', False)
+        calculateRange = st.toggle('Calculation Range', False)
         userGuess = st.toggle('Manually Guess?', False)
         if calculateRange == True:
             if definedVariable == "T":
@@ -310,7 +310,7 @@ if programType == "Equilibrium Calculator":
         st.dataframe(displayData, hide_index = True)
         st.download_button("Full Data Download", data=data.to_csv(index=False).encode('utf-8'), file_name='data.csv', mime='text/csv')
 
-elif programType == "Minimum Concentration Calculator":
+elif programType == "Minimum Concentration Calculation":
     tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F", "R"], horizontal=True)
     T = float(st.text_input("Fresh Water Equilibrium Temperature ("+tempUnit+"): ", value="280"))
     TDesired = float(st.text_input("Desired Inhibited Equilibrium Temperature ("+tempUnit+"): ", value="275"))
@@ -344,10 +344,8 @@ elif programType == "Minimum Concentration Calculator":
 
 st.header('Credits')
 st.markdown('''
-            Created by Karsten Kunneman and Dr. Amadeu K Sum at the Colorado School of Mines
-            \nBased on "Phase behavior of clathrate hydrates: a model for single and multiple 
-            gas component hydrates" by Jeffery B. Klauda and Stanley I. Sandler
-            \nImplements the Hu-Lee-Sum Correlation for Prediction of Hydrate Phase Equilibria in 
-            Mixed Salt and Organic Inhibitor Systems
+            Developed by Karsten Kunneman in collaboration with Prof. Amadeu K. Sum at the Colorado School of Mines \n
+            Hydrate model: Klauda-Sandler fugacity model (doi 10.1021/ie000322b) \n
+            Inhibhition model: HLS correlation (doi 10.1002/aic.16369)
             \nThis site created with Streamlit''')
 st.markdown(f'''<a href="https://github.com/karstenkunneman/Gas-Hydrate-Equilibrium-Calculator">Github Repo</a>''', unsafe_allow_html=True)
