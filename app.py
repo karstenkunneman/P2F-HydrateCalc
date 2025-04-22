@@ -15,8 +15,13 @@ componentList = []
 for i in range(len(IDs)):
     componentList.append(compounds[i])
 
+<<<<<<< Updated upstream
 st.title('Phases to Flow Lab :: Gas Hydrate Equilibrium Predictions Calculator')
 st.caption('Version 2025-04-16')
+=======
+st.title('Gas Hydrate Equilibrium Calculator')
+st.caption('Version 2025-04-22')
+>>>>>>> Stashed changes
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 

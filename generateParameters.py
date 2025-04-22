@@ -37,12 +37,12 @@ pvapConsts = [4.6446, -5150.369, 2.778907444, -0.0087553]
 compoundData = [[9, "O2", float(154.581), float(5.043), float(.0222),
                 float(0.01512), 0,
                 numpy.array(['{119: 1}'], dtype=object),
-                float(12.070),
-                float(1.562), float(15.999)]]
+                float(12.07),
+                float(1.562), float(32.00)]]
 
 H = [-286.942, 15450.6, 36.5593, 0.0187662]
 
-pvapConsts = [4.69009416, -5354.380735, 2.778907444, -0.009345515]
+pvapConsts = [5.1511 ,-5595.4346, 2.7789, -0.0160445]
 
 def Z(compoundData, T, P):
     waterData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == 0])[0]

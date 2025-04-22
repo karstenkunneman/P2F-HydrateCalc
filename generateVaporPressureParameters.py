@@ -21,27 +21,27 @@ for i in range(len(pressures)):
 structures = guessFile["Structure"].tolist()
 smallFrac = guessFile["Small Cage"].tolist()
 largeFrac = guessFile["Large Cage"].tolist()
+
+compoundData = [[9, "O2", float(154.581), float(5.043), float(.0222),
+                float(0.01512), 0,
+                numpy.array(['{119: 1}'], dtype=object),
+                float(12.07),
+                float(1.562), float(32.00)]]
+
+H = [-286.942, 15450.6, 36.5593, 0.0187662]
+
+LangmuirParameters = [[-121.4476378, 55833.81589, -7364428.344], [-115.7240269, 54879.37555, -7182666.353]]
 '''
+
 compoundData = [[10, "H2S", float(373.1), float(9), float(0.1005),
                 float(0), 0,
                 numpy.array(['{114: 1}'], dtype=object),
                 float(10.457),
                 float(3.631), float(34.082)]]
 
-H = [-149.551, 8227.328, 20.2327, 0.00129]
+H = [-297.158, 16347.7, 40.2024, 0.00257153]
 
 LangmuirParameters = [[-26.33120006, 3822.514824, -45381.84691], [-26.92192792, 7358.818357, -237581.8488]]'''
-
-
-compoundData = [[9, "O2", float(154.581), float(5.043), float(.0222),
-                float(0.01512), 0,
-                numpy.array(['{119: 1}'], dtype=object),
-                float(12.070),
-                float(1.562), float(15.999)]]
-
-H = [-286.942, 15450.6, 36.5593, 0.0187662]
-
-LangmuirParameters = [[-22.97258845, 2499.223241, 0], [-20.61595609, 2033.604317, 0]]
 
 def Z(compoundData, T, P):
     waterData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == 0])[0]
@@ -83,6 +83,8 @@ def freezingPointDepression(T, fug_vap, compoundData, P, chemGroups):
     deltadT = R*(273.15)**2/6011*math.log(liqPhaseComposition(T, fug_vap, compoundData, P, Psat)[0]*activityCoeff(T, phaseComposition, chemGroups))
     return deltadT
 
+psatout = numpy.array([0 for i in range(len(temperatures))])
+
 def GetHydratePVap(T, P, fractions, i):
     structure = structures[i]
     
@@ -120,12 +122,16 @@ def GetHydratePVap(T, P, fractions, i):
     def func(Psat_hydrateGuest):
         return f_w - Psat_hydrateGuest*math.exp(Vm_water*(P-Psat_hydrateGuest)/(R*T))*math.exp(Deltamu_H_w)
     
-    Psat = scipy.optimize.fsolve(func, [7.5766])
+    Psat = scipy.optimize.fsolve(func, [1000])
+    psatout[i] = float(Psat)
     return Psat
     
 def generateParameters(T, PVaps):
     def model(x, A, B, D):
-        return numpy.exp(A*numpy.log(x)+B/x+2.7789+D*x)
+        A = abs(A)
+        B = -1*abs(B)
+        D = -1*abs(D)
+        return numpy.exp(A*numpy.log(x)+B/x+2.778907444+D*x)
     
     initialGuess = [4.6446, -5150.369, -0.0087553]
     A, B, D = scipy.optimize.curve_fit(model, numpy.array(T).flatten(), numpy.array(PVaps).flatten(), p0=initialGuess)[0]

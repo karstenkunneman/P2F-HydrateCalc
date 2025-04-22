@@ -145,8 +145,8 @@ if speccedParameter == "T":
         eqOccupancy[1][i] = convergence[2][1]
         
         for j in range(len(localComponents)):
-            eqOccupancy[0][i][j] = round(eqOccupancy[0][i][j],4)
-            eqOccupancy[1][i][j] = round(eqOccupancy[1][i][j],4)
+            eqOccupancy[0][i][j] = eqOccupancy[0][i][j]
+            eqOccupancy[1][i][j] = eqOccupancy[1][i][j]
             
         hydrationNumber[i] = convergence[3]
         hydrateDensity[i] = convergence[4]
@@ -168,8 +168,8 @@ elif speccedParameter == "P":
         eqOccupancy[1][i] = convergence[2][1]
         
         for j in range(len(localComponents)):
-            eqOccupancy[0][i][j] = round(eqOccupancy[0][i][j],4)
-            eqOccupancy[1][i][j] = round(eqOccupancy[1][i][j],4)
+            eqOccupancy[0][i][j] = eqOccupancy[0][i][j]
+            eqOccupancy[1][i][j] = eqOccupancy[1][i][j]
         
         hydrationNumber[i] = convergence[3]
         hydrateDensity[i] = convergence[4]

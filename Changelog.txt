@@ -1,9 +1,3 @@
-1. Webapp now correctly requests weight percent instead of weight fraction of inhibitors from user
-2. Preset guess temperatures now autoconvert to selected temperature and pressure
-3. Removed options for Rankine and mmHg temperature and pressure
-4. Fixed an issue where nonstandard units would not graph properly with the inhibited temperature line
-5. Overhauled the P/T guess algorithm to guess different temperatures for IHV and LHV using a two-term fit
-6. Altered the formatting of graphs to be more presentable
-7. Fixed a large number of miscellaneous GUI bugs
-8. Fixed an issue where the input temperature and pressure units were not hardcoded to K and MPa
-9. Removed O2 and H2S data
+1. Implemented parameters for O2 and H2S equilibrium calculations
+2. Implemented parameters for O2 and H2S pressure guessing
+3. Implemented improved binary interaction parameters for CO2 and H2S
