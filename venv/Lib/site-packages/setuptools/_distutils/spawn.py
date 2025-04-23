@@ -2,25 +2,46 @@
 
 Provides the 'spawn()' function, a front-end to various platform-
 specific functions for launching another program in a sub-process.
-Also provides the 'find_executable()' to search the path for a given
-executable name.
 """
 
-import sys
+from __future__ import annotations
+
 import os
+import platform
+import shutil
 import subprocess
+import sys
+import warnings
+from typing import Mapping
 
-from distutils.errors import DistutilsPlatformError, DistutilsExecError
-from distutils.debug import DEBUG
-from distutils import log
-
-
-if sys.platform == 'darwin':
-    _cfg_target = None
-    _cfg_target_split = None
+from ._log import log
+from .debug import DEBUG
+from .errors import DistutilsExecError
 
 
-def spawn(cmd, search_path=1, verbose=0, dry_run=0, env=None):
+def _debug(cmd):
+    """
+    Render a subprocess command differently depending on DEBUG.
+    """
+    return cmd if DEBUG else cmd[0]
+
+
+def _inject_macos_ver(env: Mapping[str:str] | None) -> Mapping[str:str] | None:
+    if platform.system() != 'Darwin':
+        return env
+
+    from .util import MACOSX_VERSION_VAR, get_macosx_target_ver
+
+    target_ver = get_macosx_target_ver()
+    update = {MACOSX_VERSION_VAR: target_ver} if target_ver else {}
+    return {**_resolve(env), **update}
+
+
+def _resolve(env: Mapping[str:str] | None) -> Mapping[str:str]:
+    return os.environ if env is None else env
+
+
+def spawn(cmd, search_path=True, verbose=False, dry_run=False, env=None):
     """Run another program, specified as a command list 'cmd', in a new process.
 
     'cmd' is just the argument list for the new process, ie.
@@ -36,56 +57,25 @@ def spawn(cmd, search_path=1, verbose=0, dry_run=0, env=None):
     Raise DistutilsExecError if running the program fails in any way; just
     return on success.
     """
-    # cmd is documented as a list, but just in case some code passes a tuple
-    # in, protect our %-formatting code against horrible death
-    cmd = list(cmd)
-
-    log.info(' '.join(cmd))
+    log.info(subprocess.list2cmdline(cmd))
     if dry_run:
         return
 
     if search_path:
-        executable = find_executable(cmd[0])
+        executable = shutil.which(cmd[0])
         if executable is not None:
             cmd[0] = executable
 
-    env = env if env is not None else dict(os.environ)
-
-    if sys.platform == 'darwin':
-        global _cfg_target, _cfg_target_split
-        if _cfg_target is None:
-            from distutils import sysconfig
-            _cfg_target = sysconfig.get_config_var(
-                                  'MACOSX_DEPLOYMENT_TARGET') or ''
-            if _cfg_target:
-                _cfg_target_split = [int(x) for x in _cfg_target.split('.')]
-        if _cfg_target:
-            # ensure that the deployment target of build process is not less
-            # than that used when the interpreter was built. This ensures
-            # extension modules are built with correct compatibility values
-            cur_target = os.environ.get('MACOSX_DEPLOYMENT_TARGET', _cfg_target)
-            if _cfg_target_split > [int(x) for x in cur_target.split('.')]:
-                my_msg = ('$MACOSX_DEPLOYMENT_TARGET mismatch: '
-                          'now "%s" but "%s" during configure'
-                                % (cur_target, _cfg_target))
-                raise DistutilsPlatformError(my_msg)
-            env.update(MACOSX_DEPLOYMENT_TARGET=cur_target)
-
     try:
-        proc = subprocess.Popen(cmd, env=env)
-        proc.wait()
-        exitcode = proc.returncode
+        subprocess.check_call(cmd, env=_inject_macos_ver(env))
     except OSError as exc:
-        if not DEBUG:
-            cmd = cmd[0]
         raise DistutilsExecError(
-            "command %r failed: %s" % (cmd, exc.args[-1])) from exc
-
-    if exitcode:
-        if not DEBUG:
-            cmd = cmd[0]
+            f"command {_debug(cmd)!r} failed: {exc.args[-1]}"
+        ) from exc
+    except subprocess.CalledProcessError as err:
         raise DistutilsExecError(
-              "command %r failed with exit code %s" % (cmd, exitcode))
+            f"command {_debug(cmd)!r} failed with exit code {err.returncode}"
+        ) from err
 
 
 def find_executable(executable, path=None):
@@ -94,6 +84,9 @@ def find_executable(executable, path=None):
     A string listing directories separated by 'os.pathsep'; defaults to
     os.environ['PATH'].  Returns the complete filename or None if not found.
     """
+    warnings.warn(
+        'Use shutil.which instead of find_executable', DeprecationWarning, stacklevel=2
+    )
     _, ext = os.path.splitext(executable)
     if (sys.platform == 'win32') and (ext != '.exe'):
         executable = executable + '.exe'
@@ -103,14 +96,13 @@ def find_executable(executable, path=None):
 
     if path is None:
         path = os.environ.get('PATH', None)
+        # bpo-35755: Don't fall through if PATH is the empty string
         if path is None:
             try:
                 path = os.confstr("CS_PATH")
             except (AttributeError, ValueError):
                 # os.confstr() or CS_PATH is not available
                 path = os.defpath
-        # bpo-35755: Don't use os.defpath if the PATH environment variable is
-        # set to an empty string
 
     # PATH='' doesn't match, whereas PATH=':' looks in the current directory
     if not path:
