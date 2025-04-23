@@ -640,11 +640,8 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
     localPvapConsts = PvapConsts[mask]
         
     try:
-        if "II" in PvapConsts[:,0]:
-            SIIEqPressure = abs(scipy.optimize.fsolve(f,[pGuess],xtol=errorMargin,args=temperature)[0])
-            SIIEqFrac = hydrateFugacity(temperature, SIIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, compoundData)[1]
-        else:
-            raise
+        SIIEqPressure = abs(scipy.optimize.fsolve(f,[pGuess],xtol=errorMargin,args=temperature)[0])
+        SIIEqFrac = hydrateFugacity(temperature, SIIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, compoundData)[1]
     except:
         SIIEqPressure = math.inf
         SIIEqFrac = [[0 for i in range(len(moleFractions))],[0 for i in range(len(moleFractions))]]
@@ -728,11 +725,8 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
     localPvapConsts = PvapConsts[mask]
         
     try:
-        if "II" in PvapConsts[:,0]:
-            SIIEqTemperature = abs(scipy.optimize.fsolve(f,[tGuess],xtol=errorMargin,args=pressure)[0])
-            SIIEqFrac = hydrateFugacity(SIIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, compoundData)[1]
-        else:
-            raise
+        SIIEqTemperature = abs(scipy.optimize.fsolve(f,[tGuess],xtol=errorMargin,args=pressure)[0])
+        SIIEqFrac = hydrateFugacity(SIIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, compoundData)[1]
     except:
         SIIEqTemperature = math.inf
         SIIEqFrac = [[0 for i in range(len(moleFractions))],[0 for i in range(len(moleFractions))]]
