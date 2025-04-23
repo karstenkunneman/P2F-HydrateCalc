@@ -1,3 +1,1 @@
-1. Implemented parameters for O2 and H2S equilibrium calculations
-2. Implemented parameters for O2 and H2S pressure guessing
-3. Implemented improved binary interaction parameters for CO2 and H2S
+1. Added virtual environment
