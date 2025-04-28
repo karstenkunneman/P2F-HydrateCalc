@@ -8,6 +8,7 @@ import pandas
 import scipy
 from thermo.unifac import UNIFAC, PSRKSG, PSRKIP
 import ast
+import streamlit
 
 #REMOVE EVENTUALLY
 import warnings
@@ -248,6 +249,11 @@ def frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compound
             
         Cgg = Lang_GG_Const(T, compoundData, guessFractions, structure)
 
+    for i in range(2):
+        for j in range(len(vaporFugacities)):
+            if guessFractions[i][j] < 1E-10:
+                guessFractions[i][j] = 0
+        
     return guessFractions
 
 #Equation 2
@@ -572,6 +578,7 @@ def hydrateDensity(structure, occupancies, compoundData, moleFractions, T, P):
             
     return round(waterMass + guestMass, 2)
 
+@streamlit.cache_data
 def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs):
     compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])
     for i in range(len(compounds)-1):
@@ -657,6 +664,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
 
     return eqPressure, eqStructure, EqFrac, hydrationNumber(eqStructure, EqFrac), hydrateDensity(eqStructure, EqFrac, compoundData, moleFractions, temperature, eqPressure)
 
+@streamlit.cache_data
 def equilibriumTemperature(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs):
     compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])
     for i in range(len(compounds)-1):

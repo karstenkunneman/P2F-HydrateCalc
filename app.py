@@ -9,6 +9,7 @@ import numpy
 import matplotlib.pyplot as plt
 import time
 import math
+import io
 
 IDs, compounds = simFunctions.getComponents()
 componentList = []
@@ -16,7 +17,8 @@ for i in range(len(IDs)):
     componentList.append(compounds[i])
 
 st.title('Phases to Flow Lab :: Gas Hydrate Equilibrium Predictions Calculator')
-st.caption('Version 2025-04-22')
+st.caption('Version 2025-04-27')
+st.caption('NOTE: After selecting "Full Data Download" or "Download Plot", the page will appear to reset. If no changes are made to system parameters, just select "Calculate" again, and you can select other options as desired.')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
@@ -46,6 +48,7 @@ if programType == "Equilibrium Calculation":
     #Unit Selector
     tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F"], horizontal=True)
     pressureUnit = st.radio("Pressure Unit", ["MPa", "bar", "psia"], horizontal=True)
+    pressureScale = st.radio("Pressure Scale", ["Standard", "Logarithmic"], horizontal=True)
 
     #Defined Variable Selector
     definedVariable = st.radio("Defined Variable", ["T", "P"], horizontal=True)
@@ -184,10 +187,10 @@ if programType == "Equilibrium Calculation":
                 progressBar = st.progress(0, str(0) + "/" + str(len(T)))
                 for i in range(len(T)):
                     if definedVariable == "T":
-                        simResult = simFunctions.equilibriumPressure(T[i], P[i], components, moleFractions, saltConcs, inhibitorConcs)
+                        simResult = simFunctions.equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
                         eqPressure[i] = simResult[0]
                     elif definedVariable == "P":
-                        simResult = simFunctions.equilibriumTemperature(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
+                        simResult = simFunctions.equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
                         eqTemperature[i] = simResult[0]
                         eqPressure[i] = P[i]
                     eqStructure[i] = simResult[1]
@@ -211,7 +214,6 @@ if programType == "Equilibrium Calculation":
                 if definedVariable == "T":
                     for i in range(len(T)):
                         eqPressure[i] = simFunctions.pressureConversion(pressureUnit, eqPressure[i], False)
-                    "{:.2e}".format(eqPressure[i])
                     P = eqPressure
                 elif definedVariable == "P":
                     for i in range(len(P)):
@@ -239,7 +241,8 @@ if programType == "Equilibrium Calculation":
                     elif definedVariable == "P":
                         plt.plot([val for val, condition in zip(TInhibited, TInhibited) if condition is not None], [val for val, condition in zip(P, TInhibited) if condition is not None], '--', label='Inhibited System')
                     plt.legend(prop={'family': 'Arial'})
-                #plt.yscale("log")
+                if pressureScale == "Logarithmic":
+                    plt.yscale("log")
                 plt.xlabel("Temperature ("+tempUnit+")", **{'fontname':'Arial'}, fontsize = 14)
                 plt.ylabel("Pressure ("+pressureUnit+")", **{'fontname':'Arial'}, fontsize = 14)
                 plt.xticks(**{'fontname':'Arial'}, fontsize = 14)
@@ -251,10 +254,7 @@ if programType == "Equilibrium Calculation":
                 st.pyplot(fig)
                 for i in range(len(T)):
                     if definedVariable == "T":
-                        if eqPressure[i] < 1 or eqPressure[i] >= 10:
-                            eqPressure[i] = f"{eqPressure[i]:.2e}"
-                        else:
-                            eqPressure[i] = round(eqPressure[i], 2)
+                        eqPressure[i] = round(eqPressure[i], 2)
                     if definedVariable == "P":
                         eqTemperature[i] = round(eqTemperature[i], 1)
             else:
@@ -282,10 +282,7 @@ if programType == "Equilibrium Calculation":
                     if TInhibited[i] != None:
                         TInhibited[i] = round(simFunctions.tempConversion(tempUnit, TInhibited[i], True), 1)
                     eqPressure[i] = simFunctions.pressureConversion(pressureUnit, eqPressure[i], True)
-                    if eqPressure[i] < 1 or eqPressure[i] >= 10:
-                        eqPressure[i] = f"{eqPressure[i]:.2f}"
-                    else:
-                        eqPressure[i] = round(eqPressure[i], 2)
+                    eqPressure[i] = round(eqPressure[i], 2)
                     eqTemperature[i] = simFunctions.tempConversion(tempUnit, eqTemperature[i], True)
                     eqTemperature[i] = round(eqTemperature[i], 1)
             endTime = time.time()
@@ -306,9 +303,18 @@ if programType == "Equilibrium Calculation":
         elif definedVariable == "P":
             T = eqTemperature
         data = pd.DataFrame({'T ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure, 'Small Cage Occupancies': eqFractions[:,0].tolist(), 'Large Cage Occupancies': eqFractions[:,1].tolist(), 'Hydration Number': hydrationNumber, 'Hydrate Density (kg/m^3)': hydrateDensity}, [i for i in range(len(T))])
-        displayData = pd.DataFrame({'T ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure}, [i for i in range(len(T))])
+        if freshWater == False:
+            displayData = pd.DataFrame({'T ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure}, [i for i in range(len(T))])
+        else:
+            displayData = pd.DataFrame({'T ('+tempUnit+')': T, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure}, [i for i in range(len(T))])
         st.dataframe(displayData, hide_index = True)
-        st.download_button("Full Data Download", data=data.to_csv(index=False).encode('utf-8'), file_name='data.csv', mime='text/csv')
+        c1, c2 = st.columns(2)
+        with c1:
+            st.download_button("Full Data Download", data=data.to_csv(index=False).encode('utf-8'), file_name='data.csv', mime='text/csv')
+        with c2:
+            img = io.BytesIO()
+            plt.savefig(img, format='png')
+            downloadButton = st.download_button(label="Download Plot", data=img, file_name="Plot.png", mime="image/png")
 
 elif programType == "Minimum Concentration Calculation":
     tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F", "R"], horizontal=True)
