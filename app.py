@@ -132,7 +132,7 @@ if programType == "Equilibrium Calculation":
     else:
         guessFile = numpy.genfromtxt(csvGuesses, delimiter=',', skip_header=1)
         T = guessFile[:,0]
-        P = guessFile[:,1]*1E6
+        P = guessFile[:,1]
         noPoints = len(T)
         if noPoints > 1:
             calculateRange = True
