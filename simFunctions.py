@@ -504,22 +504,16 @@ def guessPressure(compounds, moleFractions, T):
         guessConsts = numpy.append(guessConsts, guessConstants.loc[guessConstants['Compound ID'] == compounds[i+1]], axis = 0)
 
     if T < 273.15:
-        constantA = 0
-        constantB = 0
+        guessPressure = 0
         for i in range(len(guessConsts)):
-            constantA += moleFractions[i]*guessConsts[i][2]
-            constantB += moleFractions[i]*guessConsts[i][3]
+            guessPressure += moleFractions[i]*guessConsts[i][2]*math.exp(guessConsts[i][3]*T)
         
-        guessPressure = constantA*math.exp(constantB*T)
         return guessPressure
     else:
-        constantA = 0
-        constantB = 0
+        guessPressure = 0
         for i in range(len(guessConsts)):
-            constantA += moleFractions[i]*guessConsts[i][4]
-            constantB += moleFractions[i]*guessConsts[i][5]
-        
-        guessPressure = constantA*math.exp(constantB*T)
+            guessPressure += moleFractions[i]*guessConsts[i][4]*math.exp(guessConsts[i][5]*T)
+
         return guessPressure
 
 def guessTemp(compounds, moleFractions, P):

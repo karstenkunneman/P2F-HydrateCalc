@@ -1,2 +1,2 @@
 T (K),T Inhibited (K),P (MPa),Structure,Small Cage Occupancy,Large Cage Occupancy,Hydration Number,Hydrate Density (kg/m3)
-280.0,280.0,inf,I,"[0, 0]","[0, 0]",,nan
+275.0,275.0,3.3281482494774832,I,"[0.844347062768819, 0]","[0.9686334910663655, 0]",6.13,910.84

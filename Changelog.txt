@@ -1,9 +1,0 @@
-1. User can now select between standard and log scale for the graph output
-2. User can now download the generated graph via button
-3. Program now stores equilibrium data, so if no changes are made to system parameters, the graph and dataframes can be regenerated
-4. Pressure output is no longer in scientific notation
-5. Dataframe will no longer display inhibited temperature in fresh water systems
-6. Removed cxfreeze library and associated files
-7. Fixed an issue with pentane and hexane equilibrium calculations
-8. Occupancy fractions less than 1E-10 are defaulted to zero to clean up output data
-9. Fixed an issue with webapp occupancy output
