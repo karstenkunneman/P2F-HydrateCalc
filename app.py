@@ -11,13 +11,21 @@ import time
 import math
 import io
 
+@st.cache_data
+def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs):
+    return simFunctions.equilibriumPressure(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs)
+
+@st.cache_data
+def equilibriumTemperature(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs):
+    return simFunctions.equilibriumTemperature(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs)
+
 IDs, compounds = simFunctions.getComponents()
 componentList = []
 for i in range(len(IDs)):
     componentList.append(compounds[i])
 
 st.title('Phases to Flow Lab :: Gas Hydrate Equilibrium Predictions Calculator')
-st.caption('Version 2025-05-10')
+st.caption('Version 2025-05-12')
 st.caption('NOTE: After selecting "Full Data Download" or "Download Plot", the page will appear to reset. If no changes are made to system parameters, just select "Calculate" again, and you can select other options as desired.')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
@@ -187,10 +195,10 @@ if programType == "Equilibrium Calculation":
                 progressBar = st.progress(0, str(0) + "/" + str(len(T)))
                 for i in range(len(T)):
                     if definedVariable == "T":
-                        simResult = simFunctions.equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
+                        simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
                         eqPressure[i] = simResult[0]
                     elif definedVariable == "P":
-                        simResult = simFunctions.equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
+                        simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
                         eqTemperature[i] = simResult[0]
                         eqPressure[i] = P[i]
                     eqStructure[i] = simResult[1]
@@ -259,11 +267,11 @@ if programType == "Equilibrium Calculation":
                         eqTemperature[i] = round(eqTemperature[i], 1)
             else:
                 if definedVariable == "T":
-                    simResult = simFunctions.equilibriumPressure(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
+                    simResult = equilibriumPressure(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
                     eqPressure[0] = simResult[0]/1E6
                     eqTemperature = T
                 elif definedVariable == "P":
-                    simResult = simFunctions.equilibriumTemperature(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
+                    simResult = equilibriumTemperature(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
                     eqTemperature[0] = simResult[0]
                     for i in range(len(P)):
                         P[i] /= 1E6

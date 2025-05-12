@@ -1,0 +1,4 @@
+In terminal:
+python -m nuitka appWrapper.py --include-module=app --include-module=simFunctions
+
+copy app.py to appWrapper.build
