@@ -73,7 +73,7 @@ if programType == "Equilibrium Calculation":
                 with c2:
                     maxTemp = float(st.text_input('Maximum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 302.1, False), 1)))
                 noPoints = st.number_input('Number of Points', 1, None, 4, 1)
-                T = numpy.arange(maxTemp, minTemp-(maxTemp-minTemp)/noPoints, -1*(maxTemp-minTemp)/(noPoints-1))
+                T = numpy.arange(minTemp, maxTemp+(maxTemp-minTemp)/noPoints, (maxTemp-minTemp)/(noPoints-1))
                 T = [round(i, 1) for i in T]
 
                 if userGuess == True:
@@ -180,7 +180,8 @@ if programType == "Equilibrium Calculation":
             if csvGuesses == None:
                 if definedVariable == "T":
                     for i in range(len(T)):
-                        P[i] = simFunctions.pressureConversion(pressureUnit, P[i], False)
+                        if userGuess == True:
+                            P[i] = simFunctions.pressureConversion(pressureUnit, P[i], False)
                 elif definedVariable == "P":
                     for i in range(len(P)):
                         T[i] = simFunctions.tempConversion(tempUnit, T[i], False)
@@ -191,6 +192,7 @@ if programType == "Equilibrium Calculation":
             TInhibited = [0 for i in range(len(T))]
             hydrationNumber = [0 for i in range(len(T))]
             hydrateDensity = [0 for i in range(len(T))]
+            eqPhase = [0 for i in range(len(T))]
             if calculateRange == True:
                 progressBar = st.progress(0, str(0) + "/" + str(len(T)))
                 for i in range(len(T)):
@@ -205,6 +207,7 @@ if programType == "Equilibrium Calculation":
                     eqFractions[i] = [[round(float(simResult[2][0][j]), 4) for j in range(len(simResult[2][0]))], [round(float(simResult[2][1][j]), 4) for j in range(len(simResult[2][1]))]]
                     hydrationNumber[i] = simResult[3]
                     hydrateDensity[i] = simResult[4]
+                    eqPhase[i] = simResult[5]
                     with progressBar:
                         st.progress((i+1)/len(T), str(i+1) + "/" + str(len(T)))
             
@@ -280,6 +283,7 @@ if programType == "Equilibrium Calculation":
                 eqFractions[0] = [[round(float(simResult[2][0][j]), 4) for j in range(len(simResult[2][0]))], [round(float(simResult[2][1][j]), 4) for j in range(len(simResult[2][1]))]]
                 hydrationNumber[0] = simResult[3]
                 hydrateDensity[0] = simResult[4]
+                eqPhase[0] = simResult[5]
                 eqFractions = numpy.array(eqFractions)
                 for i in range(len(T)):
                     if freshWater == False:
@@ -310,11 +314,12 @@ if programType == "Equilibrium Calculation":
             P = eqPressure
         elif definedVariable == "P":
             T = eqTemperature
-        data = pd.DataFrame({'T ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure, 'Small Cage Occupancies': eqFractions[:,0].tolist(), 'Large Cage Occupancies': eqFractions[:,1].tolist(), 'Hydration Number': hydrationNumber, 'Hydrate Density (kg/m^3)': hydrateDensity}, [i for i in range(len(T))])
         if freshWater == False:
             displayData = pd.DataFrame({'T ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure}, [i for i in range(len(T))])
+            data = pd.DataFrame({'T ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure, 'Small Cage Occupancies': eqFractions[:,0].tolist(), 'Large Cage Occupancies': eqFractions[:,1].tolist(), 'Hydration Number': hydrationNumber, 'Hydrate Density (kg/m^3)': hydrateDensity, 'Phase Equilibrium': eqPhase}, [i for i in range(len(T))])
         else:
             displayData = pd.DataFrame({'T ('+tempUnit+')': T, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure}, [i for i in range(len(T))])
+            data = pd.DataFrame({'T ('+tempUnit+')': T, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure, 'Small Cage Occupancies': eqFractions[:,0].tolist(), 'Large Cage Occupancies': eqFractions[:,1].tolist(), 'Hydration Number': hydrationNumber, 'Hydrate Density (kg/m^3)': hydrateDensity, 'Phase Equilibrium': eqPhase}, [i for i in range(len(T))])
         st.dataframe(displayData, hide_index = True)
         c1, c2 = st.columns(2)
         with c1:
@@ -325,7 +330,7 @@ if programType == "Equilibrium Calculation":
             downloadButton = st.download_button(label="Download Plot", data=img, file_name="Plot.png", mime="image/png")
 
 elif programType == "Minimum Concentration Calculation":
-    tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F", "R"], horizontal=True)
+    tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F"], horizontal=True)
     T = float(st.text_input("Fresh Water Equilibrium Temperature ("+tempUnit+"): ", value="280"))
     TDesired = float(st.text_input("Desired Inhibited Equilibrium Temperature ("+tempUnit+"): ", value="275"))
     hydrateType = st.radio("Hydrate Type", ["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"], horizontal=False)
@@ -350,10 +355,11 @@ elif programType == "Minimum Concentration Calculation":
     if st.button("Calculate"):
         T = simFunctions.tempConversion(tempUnit, T, False)
         TDesired = simFunctions.tempConversion(tempUnit, TDesired, False)
-        conc = simFunctions.getConcentration(T, TDesired, inhibitor, salt, betaGas, len(inhibitors), len(salts))
         if inhibitor != "salt":
+            conc = simFunctions.getConcentration(T, TDesired, inhibitor, salt, betaGas, 1, 0)
             st.text("Minimum Concentration of " + str(inhibitorList[inhibitor]) + ": " + str(round(conc,1)) + "% w/w")
         else:
+            conc = simFunctions.getConcentration(T, TDesired, inhibitor, salt, betaGas, 0, 1)
             st.text("Minimum Concentration of " + str(saltList[salt]) + ": " + str(round(conc,1)) + "% w/w")
 
 st.header('Credits')

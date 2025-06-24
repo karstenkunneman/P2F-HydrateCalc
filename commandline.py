@@ -18,7 +18,7 @@ if speccedParameter == "T":
         T = guessFile[:,0]
         P = guessFile[:,1]*1E6
         noPoints = len(T)
-        uniformComposition = input("Constant Composition? (Y/N): ")
+        uniformComposition = input("Manual Composition Input? (Y/N): ")
     else:
         uniformComposition = "Y"
         noPoints = int(input("Number of Data Points: "))
@@ -29,7 +29,7 @@ if speccedParameter == "T":
             maxGuessPressure = float(input("Maximum Guess Pressure (MPa): "))*1E6 #Pressure in Pa
             T = numpy.arange(maxTemp, minTemp-(maxTemp-minTemp)/noPoints, -1*(maxTemp-minTemp)/(noPoints-1))
             logP = numpy.arange(math.log(maxGuessPressure), math.log(minGuessPressure)-(math.log(maxGuessPressure)-math.log(minGuessPressure))/noPoints, -1*(math.log(maxGuessPressure)-math.log(minGuessPressure))/(noPoints-1))
-            P = [0 for i in range(len(T))]
+            P = numpy.zeros(len(T))
             for i in range(len(logP)):
                 P[i] = round(math.exp(logP[i]), 2)
         else:
@@ -43,7 +43,7 @@ elif speccedParameter == "P":
         T = guessFile[:,0]
         P = guessFile[:,1]*1E6
         noPoints = len(T)
-        uniformComposition = input("Constant Composition? (Y/N): ")
+        uniformComposition = input("Manual Composition Input? (Y/N): ")
     else:
         uniformComposition = "Y"
         noPoints = int(input("Number of Data Points: "))
@@ -54,7 +54,7 @@ elif speccedParameter == "P":
             maxGuessTemp = float(input("Maximum Guess Temperature (K): "))
             P = numpy.arange(maxPressure, minPressure-(maxPressure-minPressure)/noPoints, -1*(maxPressure-minPressure)/(noPoints-1))
             expT = numpy.arange(math.exp(maxGuessTemp/100), math.exp(minGuessTemp/100)-(math.exp(maxGuessTemp/100)-math.exp(minGuessTemp/100))/noPoints, -1*(math.exp(maxGuessTemp/100)-math.exp(minGuessTemp/100))/(noPoints-1))
-            T = [0 for i in range(len(expT))]
+            T = numpy.zeros(len(expT))
             for i in range(len(expT)):
                 T[i] = round(math.log(expT[i]), 2)*100
         else:
@@ -108,8 +108,8 @@ freshWater = input("Fresh Water? (Y/N): ")
 #Prints and allows user to select from salts present in data
 salts, inhibitors = simFunctions.getInhibitors()
 if freshWater != "Y":
-    saltConcs = [0 for i in range(len(salts))]
-    inhibitorConcs = [0 for i in range(len(inhibitors))]
+    saltConcs = numpy.zeros(len(salts))
+    inhibitorConcs = numpy.zeros(len(inhibitors))
     for i in range(len(salts)):
         saltConcs[i] = float(input("Concentration of " + salts[i]+ " (%): "))
     for i in range(len(inhibitors)):
@@ -119,18 +119,18 @@ if freshWater != "Y":
     if sum(inhibitorConcs)+sum(saltConcs) >= 100:
         raise Exception("Weight Percent of Inhibitors and Salts Exceeds 100%")
 else:
-    saltConcs = [0 for i in range(len(salts))]
-    inhibitorConcs = [0 for i in range(len(inhibitors))]
+    saltConcs = numpy.zeros(len(salts))
+    inhibitorConcs = numpy.zeros(len(inhibitors))
         
 print("Calculating...")
 startTime = time.time()
-eqStructure = [0 for i in range(len(T))]
+eqStructure = ["0" for i in range(len(T))]
 eqOccupancy = [0 for i in range(len(T))],[0 for i in range(len(T))]
-hydrationNumber = [0 for i in range(len(T))]
-hydrateDensity = [0 for i in range(len(T))]
+hydrationNumber = numpy.zeros(len(T))
+hydrateDensity = numpy.zeros(len(T))
 
 if speccedParameter == "T":
-    eqPressure = numpy.array([0 for i in range(len(T))],dtype=float)
+    eqPressure = numpy.zeros(len(T), dtype=float)
     for i in range(len(T)):
         if uniformComposition == "N":
             localComponents = components[i]
@@ -153,7 +153,7 @@ if speccedParameter == "T":
         print("Temperature " + str(i + 1) + " convergence point reached with a Structure " + convergence[1] + " hydrate.")
         print("Occupancy: " + str(convergence[2]))
 elif speccedParameter == "P":
-    eqTemperature = numpy.array([0 for i in range(len(P))],dtype=float)
+    eqTemperature = numpy.zeros(len(P), dtype=float)
     for i in range(len(P)):
         if uniformComposition == "N":
             localComponents = components[i]
@@ -183,7 +183,7 @@ betaGas = simFunctions.betaGas(T, eqPressure)
 endTime = time.time()
 if betaGas == 0:
     betaGas = float(input("betaGas calculation failed, please input new value (leave 0 to skip): "))
-TInhibited = [0 for i in range(len(T))]
+TInhibited = numpy.zeros(len(T))
 if freshWater != "Y":
     betaGas = simFunctions.betaGas(T, eqPressure)
     for i in range(len(T)):
@@ -200,3 +200,5 @@ with open(exportFileName, mode = 'w', newline='') as file:
         data.append([T[i], TInhibited[i], eqPressure[i], eqStructure[i], eqOccupancy[0][i], eqOccupancy[1][i], hydrationNumber[i], hydrateDensity[i]])
     writer = csv.writer(file)
     writer.writerows(data)
+
+input("Press any key to exit...")
