@@ -124,12 +124,14 @@ def getHydrateCellProperties(structure):
 #Calculates Langmuir Constant Cml
 def Lang_Const(T, cellRadii, a, RCell, z, epsilon, sigma, structure, shell, compound):    
     condition = (langParameters['Structure'] == structure) & \
-        (langParameters['Shell'] == shell) & \
-        (langParameters['Guest'] == compound)
-    
-    Ac = langParameters.loc[condition, "Ac"].values[0]
-    Bc = langParameters.loc[condition, "Bc"].values[0]
-    Dc = langParameters.loc[condition, "Dc"].values[0]
+            (langParameters['Shell'] == shell) & \
+            (langParameters['Guest'] == compound)
+
+    row_index = langParameters[condition].index[0]
+
+    Ac = langParameters.at[row_index, "Ac"]
+    Bc = langParameters.at[row_index, "Bc"]
+    Dc = langParameters.at[row_index, "Dc"]
     
     Cml = math.exp(Ac + Bc/T + Dc/T/T)
     
