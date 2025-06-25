@@ -22,7 +22,6 @@ mixConstants = pandas.read_excel('Data.xlsx', sheet_name='Binary Interaction Par
 saltData = pandas.read_excel('Data.xlsx', sheet_name='Salts Data').to_numpy()
 inhibitorData = pandas.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 langParameters = pandas.read_excel('Data.xlsx', sheet_name='Langmuir Parameters')
-integrationConstants = pandas.read_excel('Data.xlsx', sheet_name='A_int')
 henrysLawConstants = pandas.read_excel('Data.xlsx', sheet_name='Henrys Law Parameters')
 
 #Constants
@@ -45,18 +44,19 @@ def getInhibitors():
 
 #PRSV Equation of State
 def PengRobinson(compoundData, moleFractions, T, P):
+    noComponents = len(moleFractions)
     #Calculate "b" value for each pure substance and add to weighted and unweighted lists
     bmix = 0
-    b = [0]*len(moleFractions)
-    for i in range(len(moleFractions)):    
+    b = [0]*noComponents
+    for i in range(noComponents):    
         Tc = compoundData[i][2]
         Pc = compoundData[i][3]*1E6
         b[i] = 0.07780*(R*Tc/Pc)
         bmix += b[i]*moleFractions[i]
         
     #Calculate the "a" values for all pure compounds
-    a = [0]*len(moleFractions)
-    for i in range(len(moleFractions)):
+    a = [0]*noComponents
+    for i in range(noComponents):
         Tc = compoundData[i][2]
         Pc = compoundData[i][3]*1E6
         omega = compoundData[i][4]
@@ -67,19 +67,19 @@ def PengRobinson(compoundData, moleFractions, T, P):
         a[i] = 0.45724*((R**2)*(Tc**2)/Pc)*alpha
         
     #Obtain the interaction parameters for all combinations of compounds
-    if len(moleFractions) > 1:
-        interactionParameters = numpy.zeros((len(moleFractions),len(moleFractions)))
-        for i in range(len(moleFractions)):
-            for j in range(len(moleFractions)):
+    if noComponents > 1:
+        interactionParameters = numpy.zeros((noComponents,noComponents))
+        for i in range(noComponents):
+            for j in range(noComponents):
                 interactionParameters[i][j] = mixConstants.loc[(mixConstants['Compound 1'] == compoundData[i][1]), (compoundData[j][1])].reset_index(drop=True)[0]
     else:
         interactionParameters = [[0]]
         
     #Finally, determine the partial "a" values based on mole ratios
     amix = 0
-    xia = numpy.zeros(len(moleFractions))
-    for i in range(len(moleFractions)):
-        for j in range(len(moleFractions)):
+    xia = numpy.zeros(noComponents)
+    for i in range(noComponents):
+        for j in range(noComponents):
             amix += (math.sqrt(a[i]*a[j]))*(1-interactionParameters[i][j])*moleFractions[i]*moleFractions[j]
             xia[i] += (math.sqrt(a[i]*a[j]))*(1-interactionParameters[i][j])*moleFractions[j]
             
@@ -107,10 +107,10 @@ def PengRobinson(compoundData, moleFractions, T, P):
     VmVap = (ZVmix*R*T/P)
     VmLiq = (ZLmix*R*T/P)
     
-    fugVap = numpy.zeros(len(moleFractions))
+    fugVap = numpy.zeros(noComponents)
     
     #Calculate fugacities for each of the compounds
-    for i in range(len(moleFractions)):
+    for i in range(noComponents):
         fugVap[i] = P*moleFractions[i]*math.exp((b[i]/bmix)*(ZVmix-1)-math.log(ZVmix-B)-(A/(2*math.sqrt(2)*B))*(2*xia[i]/amix-b[i]/bmix)*math.log((ZVmix+(1+math.sqrt(2))*B)/(ZVmix+(1-math.sqrt(2))*B)))
         #fugLiq[i] = P*moleFractions[i]*math.exp((b[i]/bmix)*(ZLmix-1)-math.log(ZLmix-B)-(A/(2*math.sqrt(2)*B))*(2*xia[i]/amix-b[i]/bmix)*math.log((ZLmix+(1+math.sqrt(2))*B)/(ZLmix+(1-math.sqrt(2))*B)))
        
@@ -143,46 +143,54 @@ def Lang_GG_Const(T, compoundData, fracs, structure):
     except:
         I = [compoundData[0][8]]
         alpha = [compoundData[0][9]]
-    Cgg = [[1,1] for i in range(len(I))]
+        
+    noComponents = len(I)    
+        
+    Cgg = [[1,1] for i in range(noComponents)]
     
-    C6 = numpy.zeros((len(I),len(I)))
-    C8 = numpy.zeros((len(I),len(I)))
-    C10 = numpy.zeros((len(I),len(I)))
+    C6 = numpy.zeros((noComponents,noComponents))
+    C8 = numpy.zeros((noComponents,noComponents))
+    C10 = numpy.zeros((noComponents,noComponents))
             
-    for i in range(len(I)):
-        for j in range(len(I)):
+    for i in range(noComponents):
+        for j in range(noComponents):
             C6[i][j] = (3/2)*alpha[i]*alpha[j]*I[i]*I[j]/(I[i]+I[j])*23.05/.001987
             C8[i][j] = 496778.3824*alpha[i]*alpha[j]*(I[i]/(2*I[i]+I[j])+I[j]/(2*I[j]+I[i]))
             C10[i][j] = 13260598.42*alpha[i]*alpha[j]/(I[i]+I[j])
     
-    wrgg = [[[[0,0],[0,0]] for i in range(len(I))] for i in range(len(I))]
+    wrgg = [[[[0,0],[0,0]] for i in range(noComponents)] for i in range(noComponents)]
     
     #Unsure exactly what these are relative to r
     if structure == "I":
         a_lc = 12.03
+        for i in range(noComponents):
+            for j in range(noComponents):
+                r0 = a_lc*0.86602
+                wrgg[i][j][0][0] = -1*C6[i][j]*12.25367/(r0**6)-C8[i][j]*10.3552/(r0**8)-C10[i][j]*9.5644/(r0**10)
+                r1 = a_lc*0.55901
+                wrgg[i][j][0][1] = -1*C6[i][j]*13.41525/(r1**6)-C8[i][j]*12.38994/(r1**8)-C10[i][j]*12.12665/(r1**10)
+                
+                r0 = a_lc*0.55901
+                wrgg[i][j][1][0] = -1*C6[i][j]*4.47175/(r0**6)-C8[i][j]*4.12998/(r0**8)-C10[i][j]*4.02482/(r0**10)
+                r1 = a_lc*0.5
+                wrgg[i][j][1][1] = -1*C6[i][j]*5.14048/(r1**6)-C8[i][j]*3.74916/(r1**8)-C10[i][j]*3.09581/(r1**10)
     elif structure == "II":
         a_lc = 17.31
-        
+        for i in range(noComponents):
+            for j in range(noComponents):
+                r0 = a_lc*0.35355
+                wrgg[i][j][0][0] = -1*C6[i][j]*6.92768/(r0**6)-C8[i][j]*6.23392/(r0**8)-C10[i][j]*6.06724/(r0**10)
+                r1 = a_lc*0.41457
+                wrgg[i][j][0][1] = -1*C6[i][j]*6.91143/(r1**6)-C8[i][j]*6.28271/(r1**8)-C10[i][j]*6.10214/(r1**10)
+                
+                r0 = a_lc*0.41457
+                wrgg[i][j][1][0] = -1*C6[i][j]*13.82287/(r0**6)-C8[i][j]*12.56542/(r0**8)-C10[i][j]*12.20428/(r0**10)
+                r1 = a_lc*0.43301
+                wrgg[i][j][1][1] = -1*C6[i][j]*5.11677/(r1**6)-C8[i][j]*4.33181/(r1**8)-C10[i][j]*4.11102/(r1**10)
     
-    def Aij(i, j, k, l):
-        condition = (integrationConstants['Structure'] == i) & \
-            (integrationConstants['Center Cage'] == j) & \
-            (integrationConstants['Parameter'] == k) & \
-            (integrationConstants['Like/Dislike'] == l)
-        Aij = integrationConstants.loc[condition, "A"].values[0]
-        return Aij
-        
-    for i in range(len(I)):
-        for j in range(len(I)):
-            for k in range(2):
-                r0 = a_lc*Aij(structure, k, 3, 0)
-                wrgg[i][j][k][0] = -1*C6[i][j]*Aij(structure, k, 0, 0)/(r0**6)-C8[i][j]*Aij(structure, k, 1, 0)/(r0**8)-C10[i][j]*Aij(structure, k, 2, 0)/(r0**10)
-                r1 = a_lc*Aij(structure, k, 3, 1)
-                wrgg[i][j][k][1] = -1*C6[i][j]*Aij(structure, k, 0, 1)/(r1**6)-C8[i][j]*Aij(structure, k, 1, 1)/(r1**8)-C10[i][j]*Aij(structure, k, 2, 1)/(r1**10)
-    
-    #Obtain the interaction energy of guest
-    for i in range(len(I)):
-        for j in range(len(I)):
+    #Obtain the interaction energy of guestz`
+    for i in range(noComponents):
+        for j in range(noComponents):
             for k in range(2):
                 Cgg[i][k] *= math.exp(-1*(wrgg[i][j][k][0]*fracs[0][j])/T)*math.exp(-1*(wrgg[i][j][k][1]*fracs[1][j])/T)
     
@@ -190,15 +198,16 @@ def Lang_GG_Const(T, compoundData, fracs, structure):
 
 #Calculates the fractional occupancy of small and large shells by each component
 def frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compounds):
+    noComponents = len(vaporFugacities)
     cellProperties = getHydrateCellProperties(structure) 
-    guessFractions = numpy.zeros((2, len(vaporFugacities)))
-    oldGuessFractions = [[1 for i in range(len(vaporFugacities))],[1 for i in range(len(vaporFugacities))]]
-    Cgg = [[1.5, 1.5] for i in range(len(vaporFugacities))]
-    langConsts = [[None, None] for i in range(len(vaporFugacities))]
+    guessFractions = numpy.zeros((2, noComponents))
+    oldGuessFractions = [[1 for i in range(noComponents)],[1 for i in range(noComponents)]]
+    Cgg = [[1.5, 1.5] for i in range(noComponents)]
+    langConsts = [[None, None] for i in range(noComponents)]
     RCell = [0,0]
-    fracDiff = [[1 for i in range(len(vaporFugacities))],[1 for i in range(len(vaporFugacities))]]
-    while abs(sum(fracDiff[0])/len(vaporFugacities)+sum(fracDiff[1])/len(vaporFugacities))/2 >= errorMargin: #average fractional occupancy difference of all shells
-        fracDiff = numpy.zeros((2, len(vaporFugacities)))
+    fracDiff = [[1 for i in range(noComponents)],[1 for i in range(noComponents)]]
+    while abs(sum(fracDiff[0])/noComponents+sum(fracDiff[1])/noComponents)/2 >= errorMargin: #average fractional occupancy difference of all shells
+        fracDiff = numpy.zeros((2, noComponents))
         for i in range(2):
             denominator = 0
             #Hydrate Cell Properties
@@ -210,19 +219,19 @@ def frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compound
                 z[j] = cellProperties[i][5+j]
             RCell[i] = cellProperties[i][8]*1E-10
                    
-            for j in range(len(vaporFugacities)):
+            for j in range(noComponents):
                 langConsts[j][i] = Lang_Const(T, cellRadii, None, RCell[i], z, None, None, structure, i, compounds[j])*math.sqrt(1-fracDiff[i][j])
                 denominator += Cgg[j][i]*langConsts[j][i]*vaporFugacities[j]
                     
-            for j in range(len(vaporFugacities)):
+            for j in range(noComponents):
                 guessFractions[i][j] = Cgg[j][i]*langConsts[j][i]*vaporFugacities[j]/(1 + denominator)
-                fracDiff[i][j] = abs(guessFractions[i][j]/oldGuessFractions[i][j]-1)/len(vaporFugacities)
+                fracDiff[i][j] = abs(guessFractions[i][j]/oldGuessFractions[i][j]-1)/noComponents
                 oldGuessFractions[i][j]=guessFractions[i][j]
             
         Cgg = Lang_GG_Const(T, compoundData, guessFractions, structure)
 
     for i in range(2):
-        for j in range(len(vaporFugacities)):
+        for j in range(noComponents):
             if guessFractions[i][j] < 1E-10:
                 guessFractions[i][j] = 0
         
@@ -248,9 +257,10 @@ def henrysLawConst(compound, T):
 
 #Infinite Dilution Compressibility Factor
 def Z(compoundData, T, P):
-    Z = numpy.zeros(len(compoundData))
-    waterData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == 0])[0]
-    for i in range(len(compoundData)):
+    noComponents = len(compoundData)
+    Z = numpy.zeros(noComponents)
+    waterData = numpy.array([0, "H2O", 647.3, 22.09, 0.3438, -0.06635, None, {16: 1}, None, None, 18.02])
+    for i in range(noComponents):
         localCompoundData = compoundData[i]
         localCompoundData = numpy.column_stack((localCompoundData, waterData))
         localCompoundData = localCompoundData.transpose()
@@ -259,8 +269,9 @@ def Z(compoundData, T, P):
 
 #Equation 17
 def liqPhaseComposition(compounds, T, fug_vap, compoundData, P, Psat):
-    x = numpy.zeros(len(compounds)+1)
-    for i in range(len(fug_vap)):
+    noComponents = len(compounds)
+    x = numpy.zeros(noComponents+1)
+    for i in range(noComponents):
         Z_inf = Z(compoundData, T, P)
         x[i+1] = fug_vap[i]/(henrysLawConst(compounds[i], T)*math.exp(Z_inf[i]))
     x[0] = 1-sum(x) #Water composition
@@ -301,6 +312,7 @@ def waterFugacity(T, P, phase, fug_vap, compounds, compoundData):
 
 #Equation A2
 def hydrateFugacity(T, P, PvapConsts, structure, fug_vap, compounds, kiharaParameters, compoundData):
+    noComponents = len(compounds)
     cellProperties = getHydrateCellProperties(structure) 
     N_A = 6.022E23
     if structure == "I":
@@ -316,16 +328,16 @@ def hydrateFugacity(T, P, PvapConsts, structure, fug_vap, compounds, kiharaParam
     D = 0
     
     denominator = 0
-    for i in range(len(compounds)):
+    for i in range(noComponents):
         denominator += frac[0][i]*cellProperties[0][10]
         denominator += frac[1][i]*cellProperties[1][10]
             
-    Z = numpy.zeros(len(compounds))
-    for i in range(len(compounds)):
+    Z = numpy.zeros(noComponents)
+    for i in range(noComponents):
         for j in range(2):
             Z[i] += (frac[j][i]*cellProperties[j][10])/denominator
             
-    for i in range(len(compounds)):
+    for i in range(noComponents):
         A += PvapConsts[i,3]*Z[i]
         B += PvapConsts[i,4]*Z[i]
         D += PvapConsts[i,6]*Z[i]
@@ -336,27 +348,29 @@ def hydrateFugacity(T, P, PvapConsts, structure, fug_vap, compounds, kiharaParam
     return f_h,frac
 
 def HuLeeSum(T, saltConcs, inhibitorConcs, betaGas):
+    noSalts = len(saltConcs)
+    noInhibitors = len(inhibitorConcs)
     if T >= 273.15:
         if sum(saltConcs) != 0:
-            catMols = numpy.zeros(len(saltConcs))
-            anMols = numpy.zeros(len(saltConcs))
-            catMolFracs = numpy.zeros(len(saltConcs))
-            anMolFracs = numpy.zeros(len(saltConcs))
-            for i in range(len(saltConcs)):
+            catMols = numpy.zeros(noSalts)
+            anMols = numpy.zeros(noSalts)
+            catMolFracs = numpy.zeros(noSalts)
+            anMolFracs = numpy.zeros(noSalts)
+            for i in range(noSalts):
                 catMols[i] = saltConcs[i]/saltData[i][1]*saltData[i][4]
                 anMols[i] = saltConcs[i]/saltData[i][1]*saltData[i][5]
             totalSaltMols = sum(catMols)+sum(anMols)
             waterMols = (100-sum(saltConcs))/18.015
-            for i in range(len(saltConcs)):
+            for i in range(noSalts):
                 catMolFracs[i] = saltData[i][2]*catMols[i]/(waterMols+totalSaltMols)
                 anMolFracs[i] = saltData[i][3]*anMols[i]/(waterMols+totalSaltMols)
                 
-            inhibitorMols = numpy.zeros(len(inhibitorConcs))
-            inhibitorMolFracs = numpy.zeros(len(inhibitorConcs))
-            for i in range(len(inhibitorConcs)):
+            inhibitorMols = numpy.zeros(noInhibitors)
+            inhibitorMolFracs = numpy.zeros(noInhibitors)
+            for i in range(noInhibitors):
                 inhibitorMols[i] = inhibitorConcs[i]/(1-0.01*inhibitorConcs[i])/inhibitorData[i][1]
             totalMols = totalSaltMols + sum(inhibitorMols)
-            for i in range(len(inhibitorConcs)):
+            for i in range(noInhibitors):
                 inhibitorMolFracs[i] = inhibitorMols[i]/totalMols
 
             totalEffSaltMols = sum(catMolFracs) + sum(anMolFracs)
@@ -365,17 +379,17 @@ def HuLeeSum(T, saltConcs, inhibitorConcs, betaGas):
             totalSaltMols = 0
             totalEffSaltMols = 0
 
-        inhibitorMols = numpy.zeros(len(inhibitorConcs))
-        inhibitorMolFracs = numpy.zeros(len(inhibitorConcs))
-        for i in range(len(inhibitorConcs)):
+        inhibitorMols = numpy.zeros(noInhibitors)
+        inhibitorMolFracs = numpy.zeros(noInhibitors)
+        for i in range(noInhibitors):
             inhibitorMols[i] = inhibitorConcs[i]/(1-0.01*inhibitorConcs[i])/inhibitorData[i][1]
         totalMols = totalSaltMols + sum(inhibitorMols)
-        for i in range(len(inhibitorConcs)):
+        for i in range(noInhibitors):
             inhibitorMolFracs[i] = inhibitorMols[i]/(totalMols+waterMols)
 
         lnawSalts = -1.06152*totalEffSaltMols+3.25726*totalEffSaltMols*totalEffSaltMols-37.2263*totalEffSaltMols*totalEffSaltMols*totalEffSaltMols
-        lnawInhibitors = inhibitorMols = numpy.zeros(len(inhibitorConcs))
-        for i in range(len(inhibitorConcs)):
+        lnawInhibitors = inhibitorMols = numpy.zeros(noInhibitors)
+        for i in range(noInhibitors):
             lnawInhibitors[i] = inhibitorData[i][2]*inhibitorMolFracs[i]+inhibitorData[i][3]*inhibitorMolFracs[i]**2
 
         Tinhibited = T/(1-betaGas*(lnawSalts+sum(lnawInhibitors))*T)
@@ -470,31 +484,33 @@ def pressureConversion(pressureUnit, P, toMPa):
     return P
 
 def guessPressure(compounds, moleFractions, T):
+    noCompounds = len(compounds)
     guessConsts = numpy.array(guessConstants.loc[guessConstants['Compound ID'] == compounds[0]])
-    for i in range(len(compounds)-1):
+    for i in range(noCompounds-1):
         guessConsts = numpy.append(guessConsts, guessConstants.loc[guessConstants['Compound ID'] == compounds[i+1]], axis = 0)
 
     if T < 273.15:
         guessPressure = 0
-        for i in range(len(guessConsts)):
+        for i in range(noCompounds):
             guessPressure += moleFractions[i]*guessConsts[i][2]*math.exp(guessConsts[i][3]*T)
         
         return guessPressure
     else:
         guessPressure = 0
-        for i in range(len(guessConsts)):
+        for i in range(noCompounds):
             guessPressure += moleFractions[i]*guessConsts[i][4]*math.exp(guessConsts[i][5]*T)
 
         return guessPressure
 
 def guessTemp(compounds, moleFractions, P):
+    noCompounds = len(compounds)
     guessConsts = numpy.array(guessConstants.loc[guessConstants['Compound ID'] == compounds[0]])
-    for i in range(len(compounds)-1):
+    for i in range(noCompounds-1):
         guessConsts = numpy.append(guessConsts, guessConstants.loc[guessConstants['Compound ID'] == compounds[i+1]], axis = 0)
 
     constantA = 0
     constantB = 0
-    for i in range(len(guessConsts)):
+    for i in range(noCompounds):
         constantA += moleFractions[i]*guessConsts[i][2]
         constantB += moleFractions[i]*guessConsts[i][3]
     
@@ -503,7 +519,7 @@ def guessTemp(compounds, moleFractions, P):
     if guessTemp >= 273.15:
         constantA = 0
         constantB = 0
-        for i in range(len(guessConsts)):
+        for i in range(noCompounds):
             constantA += moleFractions[i]*guessConsts[i][4]
             constantB += moleFractions[i]*guessConsts[i][5]
     
@@ -523,33 +539,35 @@ def hydrationNumber(structure, occupancies):
         return None
 
 def hydrateDensity(structure, occupancies, compoundData, moleFractions, T, P):
+    noCompounds = len(moleFractions)
     N_A = 6.022E23
     guestMass = 0
     
-    molarmass = numpy.zeros(len(moleFractions))
-    for i in range(len(moleFractions)):
+    molarmass = numpy.zeros(noCompounds)
+    for i in range(noCompounds):
         molarmass[i] = compoundData[i][10]/1000
     
     if structure == "I":
         Vm_water = (11.835+2.217E-5*T+2.242E-6*T**2)**3*(1E-30*N_A/46)-8.006E-9*P/1E6+5.448E-12*(P/1E6)**2 #m3/mol
         waterMass = 18.02/1000/Vm_water #kg/m3
-        for i in range(len(moleFractions)):
+        for i in range(noCompounds):
             guestMass += (molarmass[i]*occupancies[0][i]*2 + molarmass[i]*occupancies[1][i]*6)/Vm_water/46
     elif structure == "II":
         Vm_water = (17.13+2.249E-4*T+2.013E-6*T**2-1.009E-9*T**3)**3*(1E-30*N_A/136)-8.006E-9*P/1E6+5.448E-12*(P/1E6)**2 #m3/mol
         waterMass = 18.02/1000/Vm_water #kg/m3
-        for i in range(len(moleFractions)):
+        for i in range(noCompounds):
             guestMass += (molarmass[i]*occupancies[0][i]*16 + molarmass[i]*occupancies[1][i]*8)/Vm_water/136
             
     return round(waterMass + guestMass, 1)
 
 def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs):
+    noCompounds = len(compounds)
     compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])
-    for i in range(len(compounds)-1):
+    for i in range(noCompounds -1):
         compoundData = numpy.append(compoundData, fluidProperties.loc[fluidProperties['Compound ID'] == compounds[i+1]], axis = 0)
 
     PvapConsts = numpy.array(vaporPressureConstants.loc[vaporPressureConstants['Compound ID'] == compounds[0]])
-    for i in range(len(compounds)-1):
+    for i in range(noCompounds -1):
         PvapConsts = numpy.append(PvapConsts, vaporPressureConstants.loc[vaporPressureConstants['Compound ID'] == compounds[i+1]], axis = 0)
 
     kiharaParameters = None
@@ -615,7 +633,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
         SIIEqFrac = hydrateFugacity(temperature, SIIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, compoundData)[1]
     except:
         SIIEqPressure = math.inf
-        SIIEqFrac = numpy.zeros((2,len(moleFractions)))
+        SIIEqFrac = numpy.zeros((2,noCompounds))
     
     if SIIEqPressure >= SIEqPressure:
         eqStructure = "I"
@@ -634,12 +652,13 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
     return eqPressure, eqStructure, EqFrac, hydrationNumber(eqStructure, EqFrac), hydrateDensity(eqStructure, EqFrac, compoundData, moleFractions, temperature, eqPressure), equilPhase
 
 def equilibriumTemperature(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs):
+    noCompounds = len(compounds)
     compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])
-    for i in range(len(compounds)-1):
+    for i in range(noCompounds -1):
         compoundData = numpy.append(compoundData, fluidProperties.loc[fluidProperties['Compound ID'] == compounds[i+1]], axis = 0)
 
     PvapConsts = numpy.array(vaporPressureConstants.loc[vaporPressureConstants['Compound ID'] == compounds[0]])
-    for i in range(len(compounds)-1):
+    for i in range(noCompounds -1):
         PvapConsts = numpy.append(PvapConsts, vaporPressureConstants.loc[vaporPressureConstants['Compound ID'] == compounds[i+1]], axis = 0)
 
     kiharaParameters = None
@@ -684,7 +703,7 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
             raise
     except:
         SIEqTemperature = math.inf
-        SIEqFrac = numpy.zeros((2,len(moleFractions)))
+        SIEqFrac = numpy.zeros((2,noCompounds))
     
     tGuess = temperature
     
