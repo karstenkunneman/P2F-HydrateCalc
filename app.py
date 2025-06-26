@@ -227,13 +227,16 @@ if programType == "Equilibrium Calculation":
                             else:
                                 simResult = equilibriumPressure(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
                         except:
-                            simResult = equilibriumPressure(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
+                            simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
                         eqPressure[i] = simResult[0]
                     elif definedVariable == "P":
-                        if manualComp == True:
+                        try:
+                            if manualComp == True:
+                                simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
+                            else:
+                                simResult = equilibriumPressure(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
+                        except:
                             simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
-                        else:
-                            simResult = equilibriumPressure(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
                         eqTemperature[i] = simResult[0]
                         eqPressure[i] = P[i]
                     eqStructure[i] = simResult[1]
