@@ -25,33 +25,41 @@ for i in range(len(IDs)):
     componentList.append(compounds[i])
 
 st.title('Phases to Flow Lab :: Gas Hydrate Equilibrium Predictions Calculator')
-st.caption('Version 1.0.0')
+st.caption('Version 1.0.1')
 st.caption('NOTE: After selecting "Full Data Download" or "Download Plot", the page will appear to reset. If no changes are made to system parameters, just select "Calculate" again, and you can select other options as desired.')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
 if programType == "Equilibrium Calculation":
-    #Mole Fraction Input Table
-    components = []
-    moleFractions = []
-
-    compDf = pd.DataFrame([])
-    compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[0], 'Mole Fraction': 1.}])], ignore_index=True)
-    for i in range(len(componentList)-1):
-        compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[i+1], 'Mole Fraction': 0.}])], ignore_index=True)
-
-    inputCompDf = st.data_editor(compDf, hide_index=True)
-
-    moleFracInput = inputCompDf['Mole Fraction'].tolist()
-
-    for i in range(len(componentList)):
-        if moleFracInput[i] > 0:
-            components.append(i + 1)
-            moleFractions.append(moleFracInput[i])
-
     #User temperature and guess pressure input file w/ template
     csvGuesses = st.file_uploader("Upload Temperatures and Guess Pressures (Optional)", ['csv'])
     csvTemplate = st.download_button("Guess File Template", open("Input Template.csv", encoding='utf-8'), file_name="Input Template.csv")
+
+    if csvGuesses != None:
+        manualComp = st.toggle('Manual Component Input', True)
+
+    components = []
+    moleFractions = []
+    if csvGuesses == None or manualComp == True:
+        #Mole Fraction Input Table
+        compDf = pd.DataFrame([])
+        compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[0], 'Mole Fraction': 1.}])], ignore_index=True)
+        for i in range(len(componentList)-1):
+            compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[i+1], 'Mole Fraction': 0.}])], ignore_index=True)
+
+        inputCompDf = st.data_editor(compDf, hide_index=True)
+
+        moleFracInput = inputCompDf['Mole Fraction'].tolist()
+
+        for i in range(len(componentList)):
+            if moleFracInput[i] > 0:
+                components.append(i + 1)
+                moleFractions.append(moleFracInput[i])
+
+        if sum(moleFractions) == 1:
+            confirmSumFrac = True
+        else:
+            confirmSumFrac = False
 
     #Unit Selector
     tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F"], horizontal=True)
@@ -146,6 +154,22 @@ if programType == "Equilibrium Calculation":
             calculateRange = True
         else:
             calculateRange = False
+        if csvGuesses != None and manualComp == False:
+            for i in range(len(T)):
+                pointComponents = []
+                pointMoleFractions = []
+                for j in range(len(IDs)):
+                    if guessFile[:,2+j][i] != 0 and numpy.isnan(guessFile[:,2+j][i]) == False:
+                        pointComponents.append(j+1)
+                        pointMoleFractions.append(guessFile[:,2+j][i])
+                components += [pointComponents]
+                moleFractions += [pointMoleFractions]
+            for i in range(len(components)):
+                if sum(moleFractions[i]) == 1:
+                    confirmSumFrac = True
+                else:
+                    st.markdown(f":red[Sum of component fractions in row " + str(i+1)+ " do not equal 1")
+                    confirmSumFrac = False
 
     freshWater = st.toggle('Fresh Water', True)
     inhibitorConcs = []
@@ -174,7 +198,7 @@ if programType == "Equilibrium Calculation":
 
     calculated = False
     if st.button("Calculate"):
-        if sum(moleFractions) == 1 and simFunctions.checkMaxConc(inhibitorConcs) == "" and sum(inhibitorConcs)+sum(saltConcs) < 100:
+        if confirmSumFrac == True and simFunctions.checkMaxConc(inhibitorConcs) == "" and sum(inhibitorConcs)+sum(saltConcs) < 100:
             startTime = time.time()
             eqPressure = [0 for i in range(len(T))]
             if csvGuesses == None:
@@ -197,10 +221,16 @@ if programType == "Equilibrium Calculation":
                 progressBar = st.progress(0, str(0) + "/" + str(len(T)))
                 for i in range(len(T)):
                     if definedVariable == "T":
-                        simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
+                        if manualComp == True:
+                            simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
+                        else:
+                            simResult = equilibriumPressure(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
                         eqPressure[i] = simResult[0]
                     elif definedVariable == "P":
-                        simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
+                        if manualComp == True:
+                            simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
+                        else:
+                            simResult = equilibriumPressure(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
                         eqTemperature[i] = simResult[0]
                         eqPressure[i] = P[i]
                     eqStructure[i] = simResult[1]

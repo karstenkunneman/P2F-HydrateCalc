@@ -43,7 +43,7 @@ def getInhibitors():
     return salts, inhibitors
 
 #PRSV Equation of State
-def PengRobinson(compoundData, moleFractions, T, P):
+def PengRobinson(compoundData, moleFractions, T, P, interactionParameters):
     noComponents = len(moleFractions)
     #Calculate "b" value for each pure substance and add to weighted and unweighted lists
     bmix = 0
@@ -65,15 +65,6 @@ def PengRobinson(compoundData, moleFractions, T, P):
         #kappa = 0.37464 + 1.54226*omega - 0.26992*(omega**2)
         alpha = (1 + kappa*(1-math.sqrt(T/Tc)))**2
         a[i] = 0.45724*((R**2)*(Tc**2)/Pc)*alpha
-        
-    #Obtain the interaction parameters for all combinations of compounds
-    if noComponents > 1:
-        interactionParameters = numpy.zeros((noComponents,noComponents))
-        for i in range(noComponents):
-            for j in range(noComponents):
-                interactionParameters[i][j] = mixConstants.loc[(mixConstants['Compound 1'] == compoundData[i][1]), (compoundData[j][1])].reset_index(drop=True)[0]
-    else:
-        interactionParameters = [[0]]
         
     #Finally, determine the partial "a" values based on mole ratios
     amix = 0
@@ -122,17 +113,7 @@ def getHydrateCellProperties(structure):
     return cellProperties
 
 #Calculates Langmuir Constant Cml
-def Lang_Const(T, cellRadii, a, RCell, z, epsilon, sigma, structure, shell, compound):    
-    condition = (langParameters['Structure'] == structure) & \
-            (langParameters['Shell'] == shell) & \
-            (langParameters['Guest'] == compound)
-
-    row_index = langParameters[condition].index[0]
-
-    Ac = langParameters.at[row_index, "Ac"]
-    Bc = langParameters.at[row_index, "Bc"]
-    Dc = langParameters.at[row_index, "Dc"]
-    
+def Lang_Const(T, Ac, Bc, Dc):    
     Cml = math.exp(Ac + Bc/T + Dc/T/T)
     
     return Cml
@@ -199,7 +180,7 @@ def Lang_GG_Const(T, compoundData, fracs, structure):
     return Cgg
 
 #Calculates the fractional occupancy of small and large shells by each component
-def frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compounds):
+def frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compounds, Ac, Bc, Dc):
     noComponents = len(vaporFugacities)
     cellProperties = getHydrateCellProperties(structure) 
     guessFractions = numpy.zeros((2, noComponents))
@@ -208,6 +189,10 @@ def frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compound
     langConsts = [[None, None] for i in range(noComponents)]
     RCell = [0,0]
     fracDiff = [[1 for i in range(noComponents)],[1 for i in range(noComponents)]]
+    if structure == "I":
+        structureIndex = 0
+    else:
+        structureIndex = 1
     while abs(sum(fracDiff[0])/noComponents+sum(fracDiff[1])/noComponents)/2 >= errorMargin: #average fractional occupancy difference of all shells
         fracDiff = numpy.zeros((2, noComponents))
         for i in range(2):
@@ -222,7 +207,7 @@ def frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compound
             RCell[i] = cellProperties[i][8]*1E-10
                    
             for j in range(noComponents):
-                langConsts[j][i] = Lang_Const(T, cellRadii, None, RCell[i], z, None, None, structure, i, compounds[j])*math.sqrt(1-fracDiff[i][j])
+                langConsts[j][i] = Lang_Const(T, Ac[structureIndex][i][j], Bc[structureIndex][i][j], Dc[structureIndex][i][j])*math.sqrt(1-fracDiff[i][j])
                 denominator += Cgg[j][i]*langConsts[j][i]*vaporFugacities[j]
                     
             for j in range(noComponents):
@@ -240,12 +225,12 @@ def frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compound
     return guessFractions
 
 #Equation 2
-def deltaHydratePotential(T, kiharaParameters, structure, vaporFugacities, compoundData, compounds):
+def deltaHydratePotential(T, kiharaParameters, structure, vaporFugacities, compoundData, compounds, Ac, Bc, Dc):
     cellProperties = getHydrateCellProperties(structure) 
     fractions = 0
     Deltamu_H_w = 0
 
-    fractions = frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compounds)
+    fractions = frac(T, kiharaParameters, vaporFugacities, compoundData, structure, compounds, Ac, Bc, Dc)
     
     Deltamu_H_w += cellProperties[0][10]*math.log(1-sum(fractions[0]))
     Deltamu_H_w += cellProperties[1][10]*math.log(1-sum(fractions[1]))
@@ -266,11 +251,11 @@ def Z(compoundData, T, P):
         localCompoundData = compoundData[i]
         localCompoundData = numpy.column_stack((localCompoundData, waterData))
         localCompoundData = localCompoundData.transpose()
-        Z[i] = PengRobinson(localCompoundData, [0.00001, 0.99999], 273.15, P)[3]
+        Z[i] = PengRobinson(localCompoundData, [0.00001, 0.99999], 273.15, P, [[0,0],[0,0]])[3]
     return Z
 
 #Equation 17
-def liqPhaseComposition(compounds, T, fug_vap, compoundData, P, Psat):
+def liqPhaseComposition(compounds, T, fug_vap, compoundData, P):
     noComponents = len(compounds)
     x = numpy.zeros(noComponents+1)
     for i in range(noComponents):
@@ -280,14 +265,14 @@ def liqPhaseComposition(compounds, T, fug_vap, compoundData, P, Psat):
     return x
 
 #Equation 19
-def freezingPointDepression(compounds, T, fug_vap, compoundData, P, chemGroups, saltConcs, inhibitorConcs):
+def freezingPointDepression(compounds, T, fug_vap, compoundData, P, chemGroups):
     if T > 273.15:
         Psat = math.exp(4.1539*math.log(T)-5500.9332/T+7.6537-16.1277E-3*T)
     else:
         Psat = math.exp(4.6056*math.log(T)-5501.1243/T+2.9446-T*8.1431E-3)
     
-    phaseComposition = liqPhaseComposition(compounds, T, fug_vap, compoundData, P, Psat)
-    deltadT = R*(273.15)**2/6011*math.log(liqPhaseComposition(compounds, T, fug_vap, compoundData, P, Psat)[0]*activityCoeff(T, phaseComposition, chemGroups))
+    phaseComposition = liqPhaseComposition(compounds, T, fug_vap, compoundData, P)
+    deltadT = R*(273.15)**2/6011*math.log(liqPhaseComposition(compounds, T, fug_vap, compoundData, P)[0]*activityCoeff(T, phaseComposition, chemGroups))
     return deltadT
 
 def activityCoeff(T, phaseComposition, chemGroups):
@@ -308,12 +293,12 @@ def waterFugacity(T, P, phase, fug_vap, compounds, compoundData):
         chemGroups = compoundData[:,7]
         Vm_water = math.exp(-10.921 + 2.5E-4*(T-273.15) - 3.532E-4*(P/1E6-0.101325) + 1.559E-7*((P/1E6-.101325)**2))
         Psat_water = math.exp(4.1539*math.log(T)-5500.9332/T+7.6537-16.1277E-3*T)
-        phaseComposition = liqPhaseComposition(compounds, T, fug_vap, compoundData, P, Psat_water)
+        phaseComposition = liqPhaseComposition(compounds, T, fug_vap, compoundData, P)
         f_w = phaseComposition[0]*activityCoeff(T, phaseComposition, chemGroups)*Psat_water*math.exp(Vm_water*(P-Psat_water)/(R*T))
     return f_w
 
 #Equation A2
-def hydrateFugacity(T, P, PvapConsts, structure, fug_vap, compounds, kiharaParameters, compoundData):
+def hydrateFugacity(T, P, PvapConsts, structure, fug_vap, compounds, kiharaParameters, compoundData, Ac, Bc, Dc):
     noComponents = len(compounds)
     cellProperties = getHydrateCellProperties(structure) 
     N_A = 6.022E23
@@ -322,7 +307,7 @@ def hydrateFugacity(T, P, PvapConsts, structure, fug_vap, compounds, kiharaParam
     elif structure == "II":
         Vm_water = (17.13+2.249E-4*T+2.013E-6*T**2-1.009E-9*T**3)**3*(1E-30*N_A/136)-8.006E-9*P/1E6+5.448E-12*(P/1E6)**2
     
-    dH = deltaHydratePotential(T, kiharaParameters, structure, fug_vap, compoundData, compounds)
+    dH = deltaHydratePotential(T, kiharaParameters, structure, fug_vap, compoundData, compounds, Ac, Bc, Dc)
     frac = dH[1]
     
     A = 0
@@ -564,9 +549,18 @@ def hydrateDensity(structure, occupancies, compoundData, moleFractions, T, P):
 
 def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs):
     noCompounds = len(compounds)
+
     compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])
     for i in range(noCompounds -1):
         compoundData = numpy.append(compoundData, fluidProperties.loc[fluidProperties['Compound ID'] == compounds[i+1]], axis = 0)
+
+    if noCompounds > 1:
+        interactionParameters = numpy.zeros((noCompounds,noCompounds))
+        for i in range(noCompounds):
+            for j in range(noCompounds):
+                interactionParameters[i][j] = mixConstants.loc[(mixConstants['Compound 1'] == compoundData[i][1]), (compoundData[j][1])].reset_index(drop=True)[0]
+    else:
+        interactionParameters = [[0]]
 
     PvapConsts = numpy.array(vaporPressureConstants.loc[vaporPressureConstants['Compound ID'] == compounds[0]])
     for i in range(noCompounds -1):
@@ -577,7 +571,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
     #Computational Algorithm
     pGuess = pressure
     if temperature > 260 and temperature < 280:
-        freezingPoint = 273.15+freezingPointDepression(compounds, temperature, PengRobinson(compoundData, moleFractions, 273.15, pressure)[2], compoundData, pGuess, compoundData[:,7], saltConcs, inhibitorConcs)
+        freezingPoint = 273.15+freezingPointDepression(compounds, temperature, PengRobinson(compoundData, moleFractions, 273.15, pressure, interactionParameters)[2], compoundData, pGuess, compoundData[:,7])
         if temperature > freezingPoint:
             waterPhase = "liquid"
         else:
@@ -588,12 +582,30 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
         waterPhase = "liquid"
     
     def f(pressure, temperature):
-        vaporFugacities = PengRobinson(compoundData, moleFractions, temperature, abs(pressure))[2]
+        vaporFugacities = PengRobinson(compoundData, moleFractions, temperature, abs(pressure), interactionParameters)[2]
         f_w = waterFugacity(temperature, pressure, waterPhase, vaporFugacities, compounds, compoundData)
-        f_h = hydrateFugacity(temperature, pressure, localPvapConsts, structure, vaporFugacities, compounds, kiharaParameters, compoundData)[0]
+        f_h = hydrateFugacity(temperature, pressure, localPvapConsts, structure, vaporFugacities, compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[0]
         return abs(f_h/f_w-1)
       
     structure = "I"
+
+    Ac = numpy.zeros((2,2,noCompounds))
+    Bc = numpy.zeros((2,2,noCompounds))
+    Dc = numpy.zeros((2,2,noCompounds))
+    for i in range(2):
+        for j in range(2):
+            for k in range(noCompounds):
+                compound = compounds[k]
+                condition = (langParameters['Structure'] == structure) & \
+                (langParameters['Shell'] == j) & \
+                (langParameters['Guest'] == compound)
+
+                row_index = langParameters[condition].index[0]
+
+                Ac[i][j][k] = langParameters.at[row_index, "Ac"]
+                Bc[i][j][k] = langParameters.at[row_index, "Bc"]
+                Dc[i][j][k] = langParameters.at[row_index, "Dc"]
+    
     pGuess = pressure
     mask = [0 for i in range(len(PvapConsts[:,0]))]
     for i in range(len(PvapConsts[:,0])):
@@ -606,10 +618,13 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
         
     localPvapConsts = PvapConsts[mask]
 
+    SIEqPressure = abs(scipy.optimize.fsolve(f,pGuess,xtol=errorMargin,args=temperature)[0])
+    SIEqFrac = hydrateFugacity(temperature, SIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
+
     try:
         if "I" in PvapConsts[:,0]:
             SIEqPressure = abs(scipy.optimize.fsolve(f,pGuess,xtol=errorMargin,args=temperature)[0])
-            SIEqFrac = hydrateFugacity(temperature, SIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, compoundData)[1]
+            SIEqFrac = hydrateFugacity(temperature, SIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
         else:
             raise
     except:
@@ -619,6 +634,24 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
     pGuess = pressure
     
     structure = "II"
+
+    Ac = numpy.zeros((2,2,noCompounds))
+    Bc = numpy.zeros((2,2,noCompounds))
+    Dc = numpy.zeros((2,2,noCompounds))
+    for i in range(2):
+        for j in range(2):
+            for k in range(noCompounds):
+                compound = compounds[k]
+                condition = (langParameters['Structure'] == structure) & \
+                (langParameters['Shell'] == j) & \
+                (langParameters['Guest'] == compound)
+
+                row_index = langParameters[condition].index[0]
+
+                Ac[i][j][k] = langParameters.at[row_index, "Ac"]
+                Bc[i][j][k] = langParameters.at[row_index, "Bc"]
+                Dc[i][j][k] = langParameters.at[row_index, "Dc"]
+    
     mask = [0 for i in range(len(PvapConsts[:,0]))]
     for i in range(len(PvapConsts[:,0])):
         if sum(numpy.isin(element = PvapConsts[:,1],test_elements=PvapConsts[i,1])) > 1:
@@ -632,7 +665,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
         
     try:
         SIIEqPressure = abs(scipy.optimize.fsolve(f,[pGuess],xtol=errorMargin,args=temperature)[0])
-        SIIEqFrac = hydrateFugacity(temperature, SIIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, compoundData)[1]
+        SIIEqFrac = hydrateFugacity(temperature, SIIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
     except:
         SIIEqPressure = math.inf
         SIIEqFrac = numpy.zeros((2,noCompounds))
@@ -655,9 +688,18 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
 
 def equilibriumTemperature(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs):
     noCompounds = len(compounds)
+
     compoundData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == compounds[0]])
     for i in range(noCompounds -1):
         compoundData = numpy.append(compoundData, fluidProperties.loc[fluidProperties['Compound ID'] == compounds[i+1]], axis = 0)
+
+    if noCompounds > 1:
+        interactionParameters = numpy.zeros((noCompounds,noCompounds))
+        for i in range(noCompounds):
+            for j in range(noCompounds):
+                interactionParameters[i][j] = mixConstants.loc[(mixConstants['Compound 1'] == compoundData[i][1]), (compoundData[j][1])].reset_index(drop=True)[0]
+    else:
+        interactionParameters = [[0]]
 
     PvapConsts = numpy.array(vaporPressureConstants.loc[vaporPressureConstants['Compound ID'] == compounds[0]])
     for i in range(noCompounds -1):
@@ -668,7 +710,7 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
     #Computational Algorithm
     tGuess = temperature
     if temperature > 260 and temperature < 280:
-        freezingPoint = 273.15+freezingPointDepression(compounds, tGuess, PengRobinson(compoundData, moleFractions, 273.15, pressure)[2], compoundData, pressure, compoundData[:,7], saltConcs, inhibitorConcs)
+        freezingPoint = 273.15+freezingPointDepression(compounds, tGuess, PengRobinson(compoundData, moleFractions, 273.15, pressure, interactionParameters)[2], compoundData, pressure, compoundData[:,7])
         if temperature > freezingPoint:
             waterPhase = "liquid"
         else:
@@ -679,12 +721,30 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
         waterPhase = "liquid"
     
     def f(tGuess, pressure):
-        vaporFugacities = PengRobinson(compoundData, moleFractions, abs(tGuess), pressure)[2]
+        vaporFugacities = PengRobinson(compoundData, moleFractions, abs(tGuess), pressure, interactionParameters)[2]
         f_w = waterFugacity(abs(tGuess), pressure, waterPhase, vaporFugacities, compounds, compoundData)
-        f_h = hydrateFugacity(abs(tGuess), pressure, localPvapConsts, structure, vaporFugacities, compounds, kiharaParameters, compoundData)[0]
+        f_h = hydrateFugacity(abs(tGuess), pressure, localPvapConsts, structure, vaporFugacities, compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[0]
         return abs(f_h/f_w-1)
       
     structure = "I"
+
+    Ac = numpy.zeros((2,2,noCompounds))
+    Bc = numpy.zeros((2,2,noCompounds))
+    Dc = numpy.zeros((2,2,noCompounds))
+    for i in range(2):
+        for j in range(2):
+            for k in range(noCompounds):
+                compound = compounds[k]
+                condition = (langParameters['Structure'] == structure) & \
+                (langParameters['Shell'] == j) & \
+                (langParameters['Guest'] == compound)
+
+                row_index = langParameters[condition].index[0]
+
+                Ac[i][j][k] = langParameters.at[row_index, "Ac"]
+                Bc[i][j][k] = langParameters.at[row_index, "Bc"]
+                Dc[i][j][k] = langParameters.at[row_index, "Dc"]
+
     tGuess = temperature
     mask = [0 for i in range(len(PvapConsts[:,0]))]
     for i in range(len(PvapConsts[:,0])):
@@ -700,7 +760,7 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
     try:
         if "I" in PvapConsts[:,0]:
             SIEqTemperature = abs(scipy.optimize.fsolve(f,tGuess,xtol=errorMargin,args=pressure)[0])
-            SIEqFrac = hydrateFugacity(SIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, compoundData)[1]
+            SIEqFrac = hydrateFugacity(SIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
         else:
             raise
     except:
@@ -710,6 +770,24 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
     tGuess = temperature
     
     structure = "II"
+
+    Ac = numpy.zeros((2,2,noCompounds))
+    Bc = numpy.zeros((2,2,noCompounds))
+    Dc = numpy.zeros((2,2,noCompounds))
+    for i in range(2):
+        for j in range(2):
+            for k in range(noCompounds):
+                compound = compounds[k]
+                condition = (langParameters['Structure'] == structure) & \
+                (langParameters['Shell'] == j) & \
+                (langParameters['Guest'] == compound)
+
+                row_index = langParameters[condition].index[0]
+
+                Ac[i][j][k] = langParameters.at[row_index, "Ac"]
+                Bc[i][j][k] = langParameters.at[row_index, "Bc"]
+                Dc[i][j][k] = langParameters.at[row_index, "Dc"]
+
     mask = [0 for i in range(len(PvapConsts[:,0]))]
     for i in range(len(PvapConsts[:,0])):
         if sum(numpy.isin(element = PvapConsts[:,1],test_elements=PvapConsts[i,1])) > 1:
@@ -723,7 +801,7 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
         
     try:
         SIIEqTemperature = abs(scipy.optimize.fsolve(f,[tGuess],xtol=errorMargin,args=pressure)[0])
-        SIIEqFrac = hydrateFugacity(SIIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure)[2], compounds, kiharaParameters, compoundData)[1]
+        SIIEqFrac = hydrateFugacity(SIIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
     except:
         SIIEqTemperature = math.inf
         SIIEqFrac = numpy.zeros((2,len(moleFractions)))
