@@ -7,14 +7,15 @@ import streamlit as st
 import pandas as pd
 import numpy
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as font_manager
+from matplotlib import font_manager as fm
 import time
 import io
 
 inhibitorData = pd.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
 path = 'ARIAL.TTF'
-prop = font_manager.FontProperties(fname=path)
+prop = fm.FontProperties(fname=path)
+fm.fontManager.addfont(path)
 plt.rcParams['font.family'] = prop.get_name()
 st.set_page_config(
         page_title="P2F Hydrate Calculator",
