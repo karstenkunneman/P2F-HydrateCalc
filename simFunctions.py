@@ -477,17 +477,17 @@ def guessPressure(compounds, moleFractions, T):
         guessConsts = numpy.append(guessConsts, guessConstants.loc[guessConstants['Compound ID'] == compounds[i+1]], axis = 0)
 
     if T < 273.15:
-        guessPressure = 0
+        guessPressure = 1
         for i in range(noCompounds):
-            guessPressure += moleFractions[i]*guessConsts[i][2]*math.exp(guessConsts[i][3]*T)
+            guessPressure *= moleFractions[i]*guessConsts[i][2]*math.exp(guessConsts[i][3]*T)
         
-        return guessPressure
+        return guessPressure**(1/noCompounds)
     else:
-        guessPressure = 0
+        guessPressure = 1
         for i in range(noCompounds):
-            guessPressure += moleFractions[i]*guessConsts[i][4]*math.exp(guessConsts[i][5]*T)
+            guessPressure *= moleFractions[i]*guessConsts[i][4]*math.exp(guessConsts[i][5]*T)
 
-        return guessPressure
+        return guessPressure**(1/noCompounds)
 
 def guessTemp(compounds, moleFractions, P):
     noCompounds = len(compounds)
@@ -495,20 +495,26 @@ def guessTemp(compounds, moleFractions, P):
     for i in range(noCompounds-1):
         guessConsts = numpy.append(guessConsts, guessConstants.loc[guessConstants['Compound ID'] == compounds[i+1]], axis = 0)
 
-    constantA = 0
-    constantB = 0
+    constantA = 1
+    constantB = 1
     for i in range(noCompounds):
-        constantA += moleFractions[i]*guessConsts[i][2]
-        constantB += moleFractions[i]*guessConsts[i][3]
+        constantA *= moleFractions[i]*guessConsts[i][2]
+        constantB *= moleFractions[i]*guessConsts[i][3]
     
+    constantA = constantA**(1/noCompounds)
+    constantB = constantA**(1/noCompounds)
+
     guessTemp = math.log(P/constantA)/constantB
 
     if guessTemp >= 273.15:
-        constantA = 0
-        constantB = 0
+        constantA = 1
+        constantB = 1
         for i in range(noCompounds):
-            constantA += moleFractions[i]*guessConsts[i][4]
-            constantB += moleFractions[i]*guessConsts[i][5]
+            constantA *= moleFractions[i]*guessConsts[i][2]
+            constantB *= moleFractions[i]*guessConsts[i][3]
+
+    constantA = constantA**(1/noCompounds)
+    constantB = constantA**(1/noCompounds)
     
     guessTemp = math.log(P/constantA)/constantB
 

@@ -33,7 +33,7 @@ for i in range(len(IDs)):
     componentList.append(compounds[i])
 
 st.title('Phases to Flow Lab :: Gas Hydrate Equilibrium Predictions Calculator')
-st.caption('Version 1.1.0')
+st.caption('Version 1.1.1')
 st.caption('NOTE: After selecting "Full Data Download" or "Download Plot", the page will appear to reset. If no changes are made to system parameters, just select "Calculate" again, and you can select other options as desired.')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
@@ -237,12 +237,12 @@ if programType == "Equilibrium Calculation":
                         eqPressure[i] = simResult[0]
                     elif definedVariable == "P":
                         try:
-                            if manualComp == True:
-                                simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
+                            if manualComp == True and csvGuesses == None:
+                                simResult = equilibriumTemperature(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
                             else:
-                                simResult = equilibriumPressure(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
+                                simResult = equilibriumTemperature(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
                         except:
-                            simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
+                            simResult = equilibriumTemperature(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
                         eqTemperature[i] = simResult[0]
                         eqPressure[i] = P[i]
                     eqStructure[i] = simResult[1]

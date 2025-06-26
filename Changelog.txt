@@ -1,17 +1,3 @@
-Web App Changes:
-1.  Fixed a typo
-2.  Removed ability to change y-axis scale
-3.  Web app table display now spells out "Temperature"
-4.  Added more contextual information
-5.  Added a reset button
-6.  Removed manual temperature/pressure guessing
-7.  Removed fresh water toggle
-8.  Moved inhibitor tables to top
-9.  Program now defaults to calculating a range of temperatures instead of a single point
-10. Added site icon and title
-11. User can normalize mole fractions
-12. The sum of mole fractions is now displayed
-13. Plots are now correctly displayed with Arial font
-14. Users can now choose between manual or automatic guessing when inputting a csv
-15. Added a descriptor to the guess file upload
-16. The maximum concentration for inhibitors is now shown
+Backend Changes:
+1. Fixed an issue with equilibrium temperature calculations
+2. Improved the pressure and temperature guessing algorithms
