@@ -3,6 +3,6 @@ enableStaticServing = true
 
 [[theme.fontFaces]]
 family="Arial"
-url="https://p2f-hydratecalc.streamlit.app/Gas-Hydrate-Equilibrium-Calculator/static/Arial.TTF"
+url="./app/static/ARIAL.TTF"
 style="normal"
 weight=400
