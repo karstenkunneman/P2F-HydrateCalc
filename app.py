@@ -7,13 +7,15 @@ import streamlit as st
 import pandas as pd
 import numpy
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as font_manager
 import time
-import math
 import io
 
 inhibitorData = pd.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
-plt.rcParams['font.family'] = 'Arial'
+path = 'ARIAL.ttf'
+prop = font_manager.FontProperties(fname=path)
+plt.rcParams['font.family'] = prop.get_name()
 st.set_page_config(
         page_title="P2F Hydrate Calculator",
         page_icon="thumbnail_P2F_logo(green).png",
