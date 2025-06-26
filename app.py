@@ -13,14 +13,7 @@ import io
 
 inhibitorData = pd.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
-try:
-    path = 'app/static/ARIAL.TTF'
-    prop = fm.FontProperties(fname=path)
-    plt.rcParams['font.family'] = prop.get_name()
-except:
-    path = 'static/ARIAL.TTF'
-    prop = fm.FontProperties(fname=path)
-    plt.rcParams['font.family'] = prop.get_name()
+plt.rcParams['font.family'] = "Arial"
 st.set_page_config(
         page_title="P2F Hydrate Calculator",
         page_icon="thumbnail_P2F_logo(green).png",

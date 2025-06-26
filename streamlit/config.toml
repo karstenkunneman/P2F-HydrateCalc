@@ -3,6 +3,6 @@ enableStaticServing = true
 
 [[theme.fontFaces]]
 family="Arial"
-url="app/static/Arial.ttf"
+url="Gas-Hydrate-Equilibrium-Calculator/static/Arial.ttf"
 style="normal"
 weight=400
