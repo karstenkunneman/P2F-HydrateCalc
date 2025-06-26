@@ -1,0 +1,8 @@
+[server]
+enableStaticServing = true
+
+[[theme.fontFaces]]
+family="Arial"
+url="Gas-Hydrate-Equilibrium-Calculator/static/Arial.ttf"
+style="normal"
+weight=400

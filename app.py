@@ -13,10 +13,14 @@ import io
 
 inhibitorData = pd.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
-path = 'ARIAL.TTF'
-prop = fm.FontProperties(fname=path)
-fm.fontManager.addfont(path)
-plt.rcParams['font.family'] = prop.get_name()
+try:
+    path = 'https://p2f-hydratecalc.streamlit.app/Gas-Hydrate-Equilibrium-Calculator/static/ARIAL.TTF'
+    prop = fm.FontProperties(fname=path)
+    plt.rcParams['font.family'] = prop.get_name()
+except:
+    path = 'static/ARIAL.TTF'
+    prop = fm.FontProperties(fname=path)
+    plt.rcParams['font.family'] = prop.get_name()
 st.set_page_config(
         page_title="P2F Hydrate Calculator",
         page_icon="thumbnail_P2F_logo(green).png",
@@ -410,6 +414,8 @@ elif programType == "Minimum Concentration Calculation":
         else:
             conc = simFunctions.getConcentration(T, TDesired, inhibitor, salt, betaGas, 0, 1)
             st.text("Minimum Concentration of " + str(saltList[salt]) + ": " + str(round(conc,1)) + "% w/w")
+
+st.caption("Disclaimer: The model and predictions have been tested and verified to be accurate based on extensive comparison with available literature data. However, this web app is provided ""as is"" and ""as available"" without any warranties of any kind, either express or implied, including, but not limited to, implied warranties of use, merchantability, fitness for a particular purpose, and non-infringement.")
 
 st.header('Credits')
 st.markdown('''

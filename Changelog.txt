@@ -1,3 +1,3 @@
 Backend Changes:
-1. Fixed an issue with equilibrium temperature calculations
-2. Improved the pressure and temperature guessing algorithms
+1. Added Disclaimers
+2. Fixed the font on the graphs
