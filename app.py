@@ -14,7 +14,7 @@ import io
 inhibitorData = pd.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
 try:
-    path = 'https://p2f-hydratecalc.streamlit.app/Gas-Hydrate-Equilibrium-Calculator/static/ARIAL.TTF'
+    path = 'Gas-Hydrate-Equilibrium-Calculator/static/ARIAL.TTF'
     prop = fm.FontProperties(fname=path)
     plt.rcParams['font.family'] = prop.get_name()
 except:
