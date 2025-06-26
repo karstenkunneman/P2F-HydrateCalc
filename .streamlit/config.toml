@@ -1,8 +1,0 @@
-[server]
-enableStaticServing = true
-
-[[theme.fontFaces]]
-family="Arial"
-url="./app/static/ARIAL.TTF"
-style="normal"
-weight=400
