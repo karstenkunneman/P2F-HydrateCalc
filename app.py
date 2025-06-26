@@ -13,7 +13,7 @@ import io
 
 inhibitorData = pd.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
-path = 'ARIAL.ttf'
+path = 'ARIAL.TTF'
 prop = font_manager.FontProperties(fname=path)
 plt.rcParams['font.family'] = prop.get_name()
 st.set_page_config(
