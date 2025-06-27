@@ -42,7 +42,7 @@ with c1:
 with c2:
     st.image('thumbnail_P2F_logo(green) (FULL).png')
 
-st.caption('Version 1.2.0')
+st.caption('Version 1.2.1')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
