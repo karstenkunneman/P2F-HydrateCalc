@@ -623,10 +623,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
             mask[i] = True
         
     localPvapConsts = PvapConsts[mask]
-
-    SIEqPressure = abs(scipy.optimize.fsolve(f,pGuess,xtol=errorMargin,args=temperature)[0])
-    SIEqFrac = hydrateFugacity(temperature, SIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
-
+    
     try:
         if "I" in PvapConsts[:,0]:
             SIEqPressure = abs(scipy.optimize.fsolve(f,pGuess,xtol=errorMargin,args=temperature)[0])

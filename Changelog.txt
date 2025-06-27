@@ -1,4 +1,12 @@
-Backend Changes:
-1. Added Disclaimers
-2. Fixed the font on the graphs
-3. Updated to Python 3.10.11
+Web App Changes:
+1. Rearranged some captions to make the program easier to understand
+2. User is now given the option of choosing whether or not to upload a
+   guess file before shown the upload widget, defaulting to not
+3. Updated the title to show the P2F Logo
+4. The DOI numbers for associated publications are now hyperlinks
+5. Replaced the static system in the minimum concentration calculator
+   with a fully customizable composition table
+
+Backend:
+1. Fixed an oversight that would result in a failure to come to a
+   structure I equilibrium resulting in a crash

@@ -36,17 +36,24 @@ componentList = []
 for i in range(len(IDs)):
     componentList.append(compounds[i])
 
-st.title('Phases to Flow Lab :: Gas Hydrate Equilibrium Predictions Calculator')
-st.caption('Version 1.1.1')
-st.caption('NOTE: After selecting "Full Data Download" or "Download Plot", the page will appear to reset. If no changes are made to system parameters, just select "Calculate" again, and you can select other options as desired.')
+c1, c2 = st.columns([2,0.9], gap="small")
+with c1:
+    st.title('Gas Hydrate Equilibrium Predictions Calculator')
+with c2:
+    st.image('thumbnail_P2F_logo(green) (FULL).png')
+
+st.caption('Version 1.2.0')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
 if programType == "Equilibrium Calculation":
+    st.caption('NOTE: After selecting "Full Data Download" or "Download Plot", the page will appear to reset. If no changes are made to system parameters, just select "Calculate" again, and you can select other options as desired.')
     #User temperature and guess pressure input file w/ template
-    st.caption("Upload a .csv file containing temperatures/pressures, (optional) guess pressures/temperatures, and (optional) compositions for each point.")
-    csvGuesses = st.file_uploader("Upload Temperatures and Guess Pressures (Optional)", ['csv'])
-    csvTemplate = st.download_button("Guess File Template", open("Input Template.csv", encoding='utf-8'), file_name="Input Template.csv")
+    if st.toggle("Upload Temperatures/Pressures", False) == True:
+        csvGuesses = st.file_uploader("Upload a .csv file containing temperatures/pressures, (optional) guess pressures/temperatures, and (optional) compositions for each point.", ['csv'])
+        csvTemplate = st.download_button("Guess File Template", open("Input Template.csv", encoding='utf-8'), file_name="Input Template.csv")
+    else:
+        csvGuesses = None
     
     if csvGuesses != None:
         manualComp = st.toggle('Manual Component Input', False)
@@ -56,7 +63,7 @@ if programType == "Equilibrium Calculation":
     moleFractions = []
     if csvGuesses == None or manualComp == True:
         #Mole Fraction Input Table
-        c1, c2 = st.columns(2)
+        c1, c2 = st.columns(2, gap="medium")
         with c1:
             compDf = pd.DataFrame([])
             compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[0], 'Mole Fraction': 1.}])], ignore_index=True)
@@ -383,15 +390,61 @@ elif programType == "Minimum Concentration Calculation":
     tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F"], horizontal=True)
     T = float(st.text_input("Fresh Water Equilibrium Temperature ("+tempUnit+"): ", value="280"))
     TDesired = float(st.text_input("Desired Inhibited Equilibrium Temperature ("+tempUnit+"): ", value="275"))
-    hydrateType = st.radio("Hydrate Type", ["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"], horizontal=False)
-    betaGas = [9.120E-4, 8.165E-4, 9.186E-4, 9.432E-4, 1.058E-3, 8.755E-4][["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"].index(hydrateType)]
-    inhibitorType = st.radio("Inhibitor Type", ["Salt", "Liquid Inhibitor"], horizontal=True)
-    if inhibitorType == "Liquid Inhibitor":
+
+    components = []
+    moleFractions = []
+
+    #Mole Fraction Input Table
+    c1, c2 = st.columns(2)
+    with c1:
+        compDf = pd.DataFrame([])
+        compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[0], 'Mole Fraction': 1.}])], ignore_index=True)
+        for i in range(len(componentList)-1):
+            compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[i+1], 'Mole Fraction': 0.}])], ignore_index=True)
+
+        inputCompDf = st.data_editor(compDf, hide_index=True)
+
+        moleFracInput = inputCompDf['Mole Fraction'].tolist()
+
+        for i in range(len(componentList)):
+            components.append(i + 1)
+            moleFractions.append(round(moleFracInput[i],4))
+
+    normalizeFracs = st.toggle("Normalize Mole Fractions", False)
+
+    with c2:
+        if normalizeFracs == True:
+            nonNormalSum = sum(moleFractions)
+
+            for i in range(len(moleFractions)):
+                moleFractions[i]/=nonNormalSum
+
+            normDf = pd.DataFrame([])
+            for i in range(len(componentList)):
+                normDf = pd.concat([normDf, pd.DataFrame([{'Component': componentList[i], 'Normalized Mole Fraction': moleFractions[i]}])], ignore_index=True)
+
+            inputCompDf = st.dataframe(normDf, hide_index=True)
+
+    nonZeroFracs = numpy.nonzero(moleFractions)[0]
+    moleFractions = [element for index, element in enumerate(moleFractions) if index in nonZeroFracs]
+    components = [element for index, element in enumerate(components) if index in nonZeroFracs]
+
+    st.text("Sum of Mole Fractions: " + str(round(sum(moleFractions),4)))
+
+    if sum(moleFractions) == 1:
+        confirmSumFrac = True
+    else:
+        confirmSumFrac = False
+
+    #hydrateType = st.radio("Hydrate Type", ["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"], horizontal=False)
+    #betaGas = [9.120E-4, 8.165E-4, 9.186E-4, 9.432E-4, 1.058E-3, 8.755E-4][["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"].index(hydrateType)]
+    inhibitorType = st.radio("Inhibitor Type", ["Salt", "Organic Inhibitor"], horizontal=True)
+    if inhibitorType == "Organic Inhibitor":
         salts, inhibitors = simFunctions.getInhibitors()
         inhibitorList = []
         for i in range(len(inhibitors)):
             inhibitorList.append(str(inhibitors[i]))
-        inhibitor = st.selectbox('Liquid Inhibitor', inhibitorList)
+        inhibitor = st.selectbox('Organic Inhibitor', inhibitorList)
         inhibitor = inhibitorList.index(inhibitor)
         salt = None
     else:
@@ -400,10 +453,24 @@ elif programType == "Minimum Concentration Calculation":
         saltList = []
         for i in range(len(salts)):
             saltList.append(str(salts[i]))
-        salt = st.selectbox('Liquid Inhibitor', saltList)
+        salt = st.selectbox('Salt Type', saltList)
         salt = saltList.index(salt)
+
     if st.button("Calculate"):
+        if confirmSumFrac != True:
+            st.markdown(f":red[Sum of component fractions in row " + str(i+1)+ " do not equal 1")
+            st.reset()
         T = simFunctions.tempConversion(tempUnit, T, False)
+        Tlist = [T-0.5, T, T+0.5]
+
+        guessP = [simFunctions.guessPressure(components, moleFractions, Tlist[0]), simFunctions.guessPressure(components, moleFractions, Tlist[1]), simFunctions.guessPressure(components, moleFractions, Tlist[2])]
+
+        P = [equilibriumPressure(Tlist[0], guessP[0], components, moleFractions, [], [])[0],
+             equilibriumPressure(Tlist[1], guessP[1], components, moleFractions, [], [])[0],
+             equilibriumPressure(Tlist[2], guessP[2], components, moleFractions, [], [])[0]]
+        
+        betaGas = simFunctions.betaGas(Tlist, P)
+
         TDesired = simFunctions.tempConversion(tempUnit, TDesired, False)
         if inhibitor != "salt":
             conc = simFunctions.getConcentration(T, TDesired, inhibitor, salt, betaGas, 1, 0)
@@ -417,7 +484,7 @@ st.caption("Disclaimer: The model and predictions have been tested and verified 
 st.header('Credits')
 st.markdown('''
             Developed by Karsten Kunneman in collaboration with Prof. Amadeu K. Sum at the Colorado School of Mines
-            \nHydrate model: Klauda-Sandler fugacity model [doi 10.1021/ie000322b]
-            \nInhibition model: HLS correlation [doi 10.1002/aic.16369]
+            \nHydrate model: Klauda-Sandler fugacity model [[doi:10.1021/ie000322b]](https://doi.org/10.1021/ie000322b)
+            \nInhibition model: HLS correlation [[doi:10.1002/aic.16369]](https://doi.org/10.1002/aic.16369)
             \nThis site is created with Streamlit''')
 st.markdown(f'''<a href="https://github.com/karstenkunneman/Gas-Hydrate-Equilibrium-Calculator">Github Repo</a>''', unsafe_allow_html=True)
