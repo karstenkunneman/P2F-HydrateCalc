@@ -54,6 +54,7 @@ if programType == "Equilibrium Calculation":
         csvTemplate = st.download_button("Guess File Template", open("Input Template.csv", encoding='utf-8'), file_name="Input Template.csv")
     else:
         csvGuesses = None
+        manualComp = True
     
     if csvGuesses != None:
         manualComp = st.toggle('Manual Component Input', False)
