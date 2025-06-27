@@ -606,11 +606,16 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
                 (langParameters['Shell'] == j) & \
                 (langParameters['Guest'] == compound)
 
-                row_index = langParameters[condition].index[0]
+                try:
+                    row_index = langParameters[condition].index[0]
 
-                Ac[i][j][k] = langParameters.at[row_index, "Ac"]
-                Bc[i][j][k] = langParameters.at[row_index, "Bc"]
-                Dc[i][j][k] = langParameters.at[row_index, "Dc"]
+                    Ac[i][j][k] = langParameters.at[row_index, "Ac"]
+                    Bc[i][j][k] = langParameters.at[row_index, "Bc"]
+                    Dc[i][j][k] = langParameters.at[row_index, "Dc"]
+                except:
+                    Ac[i][j][k] = -100
+                    Bc[i][j][k] = 0
+                    Dc[i][j][k] = 0
     
     pGuess = pressure
     mask = [0 for i in range(len(PvapConsts[:,0]))]

@@ -1,3 +1,7 @@
-Backend:
+Web App:
 1. Fixed an issue where attempting to make an equilibrium calculation without a file
    input would result in a crash
+
+Backend:
+1. Fixed an issue where attempting to make an equilibrium calculation with Oxygen or
+   H2S could result in a crash
