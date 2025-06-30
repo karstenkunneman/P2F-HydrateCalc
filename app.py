@@ -10,6 +10,11 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager as fmgr, rcParams
 import time
 import io
+import base64
+import sys
+if sys.gettrace() is None:
+    #This will crash the program if in debug mode
+    import pyautogui
 
 inhibitorData = pd.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
@@ -36,18 +41,25 @@ componentList = []
 for i in range(len(IDs)):
     componentList.append(compounds[i])
 
+st.image("Mines-horiz.png")
+
 c1, c2 = st.columns([2,0.9], gap="small")
 with c1:
     st.title('Gas Hydrate Equilibrium Predictions Calculator')
 with c2:
-    st.image('thumbnail_P2F_logo(green) (FULL).png')
+    #st.markdown("[![Phases to Flow Laboratory](thumbnail_P2F_logo(green) (FULL).png)](people.mines.edu/asum/)", unsafe_allow_html=True)
+    st.markdown(
+    """<a href="https://people.mines.edu/asum/">
+    <img src="data:image/png;base64,{}" width="462">
+    </a>""".format(
+        base64.b64encode(open("thumbnail_P2F_logo(green) (FULL).png", "rb").read()).decode()
+    ), unsafe_allow_html=True)
 
-st.caption('Version 1.2.1')
+st.caption('Version 1.3.0')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
 if programType == "Equilibrium Calculation":
-    st.caption('NOTE: After selecting "Full Data Download" or "Download Plot", the page will appear to reset. If no changes are made to system parameters, just select "Calculate" again, and you can select other options as desired.')
     #User temperature and guess pressure input file w/ template
     if st.toggle("Upload Temperatures/Pressures", False) == True:
         csvGuesses = st.file_uploader("Upload a .csv file containing temperatures/pressures, (optional) guess pressures/temperatures, and (optional) compositions for each point.", ['csv'])
@@ -64,24 +76,56 @@ if programType == "Equilibrium Calculation":
     moleFractions = []
     if csvGuesses == None or manualComp == True:
         #Mole Fraction Input Table
-        c1, c2 = st.columns(2, gap="medium")
+        massFraction = st.toggle("Input Mass Fractions", False)
+        c1, c2, c3 = st.columns([1, 0.9, 1.1], gap="small")
         with c1:
-            compDf = pd.DataFrame([])
-            compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[0], 'Mole Fraction': 1.}])], ignore_index=True)
-            for i in range(len(componentList)-1):
-                compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[i+1], 'Mole Fraction': 0.}])], ignore_index=True)
+            if massFraction == False:
+                compDf = pd.DataFrame([])
+                compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[0], 'Mole Fraction': 1.}])], ignore_index=True)
+                for i in range(len(componentList)-1):
+                    compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[i+1], 'Mole Fraction': 0.}])], ignore_index=True)
 
-            inputCompDf = st.data_editor(compDf, hide_index=True)
+                inputCompDf = st.data_editor(compDf, hide_index=True, column_config={
+                    "Component": st.column_config.TextColumn("Component", disabled=True),
+                    "Mole Fraction": st.column_config.NumberColumn("Mole Fraction"),
+                })
 
-            moleFracInput = inputCompDf['Mole Fraction'].tolist()
+                moleFracInput = inputCompDf['Mole Fraction'].tolist()
 
-            for i in range(len(componentList)):
-                components.append(i + 1)
-                moleFractions.append(round(moleFracInput[i],4))
+                for i in range(len(componentList)):
+                    components.append(i + 1)
+                    moleFractions.append(round(moleFracInput[i],4))
+            else:
+                massFractions = []
+                compDf = pd.DataFrame([])
+                compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[0], 'Mass Fraction': 1.}])], ignore_index=True)
+                for i in range(len(componentList)-1):
+                    compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[i+1], 'Mass Fraction': 0.}])], ignore_index=True)
+
+                inputCompDf = st.data_editor(compDf, hide_index=True, column_config={
+                    "Component": st.column_config.TextColumn("Component", disabled=True),
+                    "Mass Fraction": st.column_config.NumberColumn("Mass Fraction"),
+                })
+
+                massFracInput = inputCompDf['Mass Fraction'].tolist()
+
+                for i in range(len(componentList)):
+                    components.append(i + 1)
+                    massFractions.append(round(massFracInput[i],4))
 
         normalizeFracs = st.toggle("Normalize Mole Fractions", False)
 
         with c2:
+            if massFraction == True:
+                moleFractions = simFunctions.massToMolFrac(compounds, massFractions)
+
+                normDf = pd.DataFrame([])
+                for i in range(len(componentList)):
+                    normDf = pd.concat([normDf, pd.DataFrame([{'Component': componentList[i], 'Mole Fraction': moleFractions[i]}])], ignore_index=True)
+
+                inputCompDf = st.dataframe(normDf, hide_index=True)
+
+        with c3:
             if normalizeFracs == True:
                 nonNormalSum = sum(moleFractions)
 
@@ -90,7 +134,7 @@ if programType == "Equilibrium Calculation":
 
                 normDf = pd.DataFrame([])
                 for i in range(len(componentList)):
-                    normDf = pd.concat([normDf, pd.DataFrame([{'Component': componentList[i], 'Normalized Mole Fraction': moleFractions[i]}])], ignore_index=True)
+                    normDf = pd.concat([normDf, pd.DataFrame([{'Component': componentList[i], 'Normalized Mole Frac.': moleFractions[i]}])], ignore_index=True)
 
                 inputCompDf = st.dataframe(normDf, hide_index=True)
 
@@ -110,13 +154,16 @@ if programType == "Equilibrium Calculation":
     #Inhibitor Concentration input Tables
     salts, inhibitors = simFunctions.getInhibitors()
 
-    c1, c2 = st.columns(2)
+    c1, c2 = st.columns(2, gap="medium")
     with c1:
         st.caption("Input Salt Concentration (wt%) based on water amount")
         saltConcDf = pd.DataFrame([])
         for i in range(len(salts)):
             saltConcDf = pd.concat([saltConcDf, pd.DataFrame([{'Salt': salts[i], 'Wt. %': 0.}])], ignore_index=True)
-        inputSaltDf = st.data_editor(saltConcDf, hide_index=True)
+        inputSaltDf = st.data_editor(saltConcDf, hide_index=True, column_config={
+            "Salt": st.column_config.TextColumn("Salt", disabled=True),
+            "Wt. %": st.column_config.NumberColumn("Wt. %"),
+        })
         saltConcs = inputSaltDf['Wt. %'].tolist()
 
     with c2:
@@ -124,7 +171,11 @@ if programType == "Equilibrium Calculation":
         inhibitorConcDf = pd.DataFrame([])
         for i in range(len(inhibitors)):
             inhibitorConcDf = pd.concat([inhibitorConcDf, pd.DataFrame([{'Inhibitor': inhibitors[i], 'Wt. %': 0., 'Max. Conc.': inhibitorData[i][5]}])], ignore_index=True)
-        inputInhibitorDf = st.data_editor(inhibitorConcDf, hide_index=True)
+        inputInhibitorDf = st.data_editor(inhibitorConcDf, hide_index=True, column_config={
+            "Inhibitor": st.column_config.TextColumn("Inhibitor", disabled=True),
+            "Wt. %": st.column_config.NumberColumn("Wt. %"),
+            "Max. Conc.": st.column_config.TextColumn("Max. Conc.", disabled=True)
+        })
         inhibitorConcs = inputInhibitorDf['Wt. %'].tolist()
 
     #Unit Selector
@@ -150,10 +201,13 @@ if programType == "Equilibrium Calculation":
                 T = numpy.arange(minTemp, maxTemp+(maxTemp-minTemp)/noPoints, (maxTemp-minTemp)/(noPoints-1))
                 T = [round(i, 1) for i in T]
 
+                components = [components for i in range(len(T))]
+                moleFractions = [moleFractions for i in range(len(T))]
+
                 P = [0 for i in range(len(T))]
                 for i in range(len(T)):
                     T[i] = simFunctions.tempConversion(tempUnit, T[i], True)
-                    P[i] = simFunctions.guessPressure(components, moleFractions, T[i])/1E6
+                    P[i] = simFunctions.guessPressure(components[i], moleFractions[i], T[i])/1E6
 
             else:
                 c1, c2 = st.columns(2)
@@ -164,11 +218,13 @@ if programType == "Equilibrium Calculation":
                 noPoints = st.number_input('Number of Points', 1, None, 4, 1)
                 P = numpy.arange(maxPressure, minPressure-(maxPressure-minPressure)/noPoints, -1*(maxPressure-minPressure)/(noPoints-1))
 
+                components = [components for i in range(len(P))]
+                moleFractions = [moleFractions for i in range(len(P))]
 
                 T = [0 for i in range(len(P))]
                 for i in range(len(P)):
                     P[i] = simFunctions.pressureConversion(pressureUnit, P[i], True)
-                    T[i] = simFunctions.guessTemp(components, moleFractions, P[i]*1E6)
+                    T[i] = simFunctions.guessTemp(components[i], moleFractions[i], P[i]*1E6)
 
         else:
             hydrateType = st.radio("Hydrate Type", ["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"], horizontal=False)
@@ -219,7 +275,8 @@ if programType == "Equilibrium Calculation":
         if confirmSumFrac == True and simFunctions.checkMaxConc(inhibitorConcs) == "" and sum(inhibitorConcs)+sum(saltConcs) < 100:
             startTime = time.time()
             eqPressure = [0 for i in range(len(T))]
-            if csvGuesses == None:
+            eqTemperature = [0 for i in range(len(P))]
+            if csvGuesses == None and manualComp == True:
                 if definedVariable == "T":
                     for i in range(len(T)):
                         if userGuess == True:
@@ -227,8 +284,8 @@ if programType == "Equilibrium Calculation":
                 elif definedVariable == "P":
                     for i in range(len(P)):
                         T[i] = simFunctions.tempConversion(tempUnit, T[i], False)
-                        eqTemperature = [0 for i in range(len(P))]
 
+            simResult = [[] for i in range(len(T))]
             eqStructure = [0 for i in range(len(T))]
             eqFractions = [0 for i in range(len(T))]
             TInhibited = [0 for i in range(len(T))]
@@ -239,29 +296,18 @@ if programType == "Equilibrium Calculation":
                 progressBar = st.progress(0, str(0) + "/" + str(len(T)))
                 for i in range(len(T)):
                     if definedVariable == "T":
-                        try:
-                            if manualComp == True and csvGuesses == None:
-                                simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
-                            else:
-                                simResult = equilibriumPressure(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
-                        except:
-                            simResult = equilibriumPressure(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
-                        eqPressure[i] = simResult[0]
+                        simResult[i] = equilibriumPressure(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
+                        eqPressure[i] = simResult[i][0]
                     elif definedVariable == "P":
-                        try:
-                            if manualComp == True and csvGuesses == None:
-                                simResult = equilibriumTemperature(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
-                            else:
-                                simResult = equilibriumTemperature(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
-                        except:
-                            simResult = equilibriumTemperature(T[i], P[i]*1E6, components, moleFractions, saltConcs, inhibitorConcs)
-                        eqTemperature[i] = simResult[0]
+                        simResult[i] = equilibriumTemperature(T[i], P[i]*1E6, components[i], moleFractions[i], saltConcs, inhibitorConcs)
+                        eqTemperature[i] = simResult[i][0]
                         eqPressure[i] = P[i]
-                    eqStructure[i] = simResult[1]
-                    eqFractions[i] = [[round(float(simResult[2][0][j]), 4) for j in range(len(simResult[2][0]))], [round(float(simResult[2][1][j]), 4) for j in range(len(simResult[2][1]))]]
-                    hydrationNumber[i] = simResult[3]
-                    hydrateDensity[i] = simResult[4]
-                    eqPhase[i] = simResult[5]
+                    eqStructure[i] = simResult[i][1]
+                    eqFractions[i] = [[round(float(simResult[i][2][0][j]), 4) for j in range(len(simResult[i][2][0]))], [round(float(simResult[i][2][1][j]), 4) for j in range(len(simResult[i][2][1]))]]
+                    hydrationNumber[i] = simResult[i][3]
+                    hydrateDensity[i] = simResult[i][4]
+                    eqPhase[i] = simResult[i][5]
+                    freezingPoint = simResult[i][6]
                     with progressBar:
                         st.progress((i+1)/len(T), str(i+1) + "/" + str(len(T)))
             
@@ -289,7 +335,7 @@ if programType == "Equilibrium Calculation":
                 for i in range(len(T)):
                     if sum(inhibitorConcs) + sum(saltConcs) != 0:
                         if T[i] >= 273.15:
-                            TInhibited[i] = round(simFunctions.HuLeeSum(T[i], saltConcs, inhibitorConcs, betaGas), 1)
+                            TInhibited[i] = round(simFunctions.HuLeeSum(T[i], saltConcs, inhibitorConcs, betaGas, freezingPoint), 1)
                         else:
                             TInhibited[i] = None
                     else:
@@ -324,24 +370,25 @@ if programType == "Equilibrium Calculation":
                         eqTemperature[i] = round(eqTemperature[i], 1)
             else:
                 if definedVariable == "T":
-                    simResult = equilibriumPressure(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
-                    eqPressure[0] = simResult[0]/1E6
+                    simResult[i] = equilibriumPressure(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
+                    eqPressure[0] = simResult[i][0]/1E6
                     eqTemperature = T
                 elif definedVariable == "P":
-                    simResult = equilibriumTemperature(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
-                    eqTemperature[0] = simResult[0]
+                    simResult[i] = equilibriumTemperature(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
+                    eqTemperature[0] = simResult[i][0]
                     for i in range(len(P)):
                         P[i] /= 1E6
                     eqPressure = P
-                eqStructure[0] = simResult[1]
-                eqFractions[0] = [[round(float(simResult[2][0][j]), 4) for j in range(len(simResult[2][0]))], [round(float(simResult[2][1][j]), 4) for j in range(len(simResult[2][1]))]]
-                hydrationNumber[0] = simResult[3]
-                hydrateDensity[0] = simResult[4]
-                eqPhase[0] = simResult[5]
+                eqStructure[0] = simResult[i][1]
+                eqFractions[0] = [[round(float(simResult[i][2][0][j]), 4) for j in range(len(simResult[i][2][0]))], [round(float(simResult[i][2][1][j]), 4) for j in range(len(simResult[i][2][1]))]]
+                hydrationNumber[0] = simResult[i][3]
+                hydrateDensity[0] = simResult[i][4]
+                eqPhase[0] = simResult[i][5]
+                freezingPoint = simResult[i][6]
                 eqFractions = numpy.array(eqFractions)
                 for i in range(len(T)):
                     if sum(inhibitorConcs) + sum(saltConcs) != 0:
-                        TInhibited[i] = round(simFunctions.HuLeeSum(eqTemperature[0], saltConcs, inhibitorConcs, betaGas), 1)
+                        TInhibited[i] = round(simFunctions.HuLeeSum(eqTemperature[0], saltConcs, inhibitorConcs, betaGas, freezingPoint), 1)
                     else:
                         TInhibited[i] = eqTemperature[0]
                     T[i] = round(simFunctions.tempConversion(tempUnit, T[i], True), 1)
@@ -370,22 +417,25 @@ if programType == "Equilibrium Calculation":
             T = eqTemperature
         if sum(inhibitorConcs) + sum(saltConcs) != 0:
             displayData = pd.DataFrame({'Temperature ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure}, [i for i in range(len(T))])
-            data = pd.DataFrame({'T ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure, 'Small Cage Occupancies': eqFractions[:,0].tolist(), 'Large Cage Occupancies': eqFractions[:,1].tolist(), 'Hydration Number': hydrationNumber, 'Hydrate Density (kg/m^3)': hydrateDensity, 'Phase Equilibrium': eqPhase}, [i for i in range(len(T))])
+            data = pd.DataFrame(simFunctions.generateOutput(components, moleFractions, salts, saltConcs, inhibitors, inhibitorConcs, T, TInhibited, P, simResult, IDs))
         else:
             displayData = pd.DataFrame({'Temperature ('+tempUnit+')': T, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure}, [i for i in range(len(T))])
-            data = pd.DataFrame({'T ('+tempUnit+')': T, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure, 'Small Cage Occupancies': eqFractions[:,0].tolist(), 'Large Cage Occupancies': eqFractions[:,1].tolist(), 'Hydration Number': hydrationNumber, 'Hydrate Density (kg/m^3)': hydrateDensity, 'Phase Equilibrium': eqPhase}, [i for i in range(len(T))])
+            data = pd.DataFrame(simFunctions.generateOutput(components, moleFractions, salts, saltConcs, inhibitors, inhibitorConcs, T, TInhibited, P, simResult, IDs))
         st.dataframe(displayData, hide_index = True)
         c1, c2 = st.columns(2)
         with c1:
-            st.download_button("Save Full Dataset", data=data.to_csv(index=False).encode('utf-8'), file_name='data.csv', mime='text/csv')
+            st.download_button("Save Full Dataset", data=data.to_csv(index=False, header=False).encode('utf-8-sig'), file_name='data.csv', mime='text/csv')
         with c2:
             img = io.BytesIO()
             plt.savefig(img, format='png')
             downloadButton = st.download_button(label="Save Plot", data=img, file_name="Plot.png", mime="image/png")
         st.text("Full dataset includes temperature, inhibited temperature, pressure, structure, small and large cage occupancy, hydration number, hydrate density, and phase for each point")
 
-        if st.button("Reset"):
-            st.resetpage()
+        st.caption('NOTE: After selecting "Full Data Download" or "Download Plot", the page will appear to reset. If no changes are made to system parameters, just select "Calculate" again, and you can select other options as desired.')
+
+    if st.button("Reset"):
+        if sys.gettrace() is None:
+            pyautogui.hotkey("ctrl","F5")
 
 elif programType == "Minimum Concentration Calculation":
     tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F"], horizontal=True)
@@ -403,13 +453,18 @@ elif programType == "Minimum Concentration Calculation":
         for i in range(len(componentList)-1):
             compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[i+1], 'Mole Fraction': 0.}])], ignore_index=True)
 
-        inputCompDf = st.data_editor(compDf, hide_index=True)
+        inputCompDf = st.data_editor(compDf, hide_index=True, column_config={
+            "Component": st.column_config.TextColumn("Component", disabled=True),
+            "Mole Fraction": st.column_config.NumberColumn("Mole Fraction"),
+        })
 
         moleFracInput = inputCompDf['Mole Fraction'].tolist()
 
         for i in range(len(componentList)):
             components.append(i + 1)
             moleFractions.append(round(moleFracInput[i],4))
+
+    st.text("Sum of Mole Fractions: " + str(round(sum(moleFractions),4)))
 
     normalizeFracs = st.toggle("Normalize Mole Fractions", False)
 
@@ -429,8 +484,6 @@ elif programType == "Minimum Concentration Calculation":
     nonZeroFracs = numpy.nonzero(moleFractions)[0]
     moleFractions = [element for index, element in enumerate(moleFractions) if index in nonZeroFracs]
     components = [element for index, element in enumerate(components) if index in nonZeroFracs]
-
-    st.text("Sum of Mole Fractions: " + str(round(sum(moleFractions),4)))
 
     if sum(moleFractions) == 1:
         confirmSumFrac = True

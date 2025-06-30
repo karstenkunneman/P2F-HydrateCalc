@@ -1,7 +1,21 @@
 Web App:
 1. Fixed an issue where attempting to make an equilibrium calculation without a file
    input would result in a crash
+2. Updated file output to new format
+3. Moved some text around relating to normalized mole fractions
+4. P2F Logo now redirects to laboratory home page
+5. All input dataframes will now only allow the user to input in expected columns
+6. Improved reset function, and the reset button is now always shown
+7. User can now input mass fraction instead of mole fraction for hydrate formers
+
+Command Line:
+1. Updated file output to new format
+2. Command Line program now allows user to automatically guess pressures/temperatures
 
 Backend:
 1. Fixed an issue where attempting to make an equilibrium calculation with Oxygen or
    H2S could result in a crash
+2. Code cleanup and added more comments
+3. Removed some repetitive code
+4. Hu-Lee-Sum inhibition calculation will now occur in all temperatures for which there
+   is a liquid water phase
