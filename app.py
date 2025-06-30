@@ -11,10 +11,6 @@ from matplotlib import font_manager as fmgr, rcParams
 import time
 import io
 import base64
-import sys
-if sys.gettrace() is None:
-    #This will crash the program if in debug mode
-    import pyautogui
 
 inhibitorData = pd.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
@@ -434,8 +430,7 @@ if programType == "Equilibrium Calculation":
         st.caption('NOTE: After selecting "Full Data Download" or "Download Plot", the page will appear to reset. If no changes are made to system parameters, just select "Calculate" again, and you can select other options as desired.')
 
     if st.button("Reset"):
-        if sys.gettrace() is None:
-            pyautogui.hotkey("ctrl","F5")
+        st.rerun()
 
 elif programType == "Minimum Concentration Calculation":
     tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F"], horizontal=True)

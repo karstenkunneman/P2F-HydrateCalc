@@ -3,4 +3,3 @@ streamlit
 matplotlib
 thermo
 openpyxl
-pyautogui
