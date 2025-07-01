@@ -1,9 +1,3 @@
 Web App:
-1. Changed the Mines Logo to a white version
-2. Improved formatting of .csv output
-3. Minimum concentration calculator now allows for mass fraction component input
-4. Fixed an issue where attempting to upload a .csv guess file would result in a crash
-5. Removed the "Reset" button and replaced it with instructions to refresh the page
-
-Command Line:
-1. Improved formatting of .csv output
+1. Fixed an issue where the minimum concentration calculator would crash under
+   normal usage

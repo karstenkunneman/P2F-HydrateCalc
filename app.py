@@ -544,18 +544,23 @@ elif programType == "Minimum Concentration Calculation":
 
         guessP = [simFunctions.guessPressure(components, moleFractions, Tlist[0]), simFunctions.guessPressure(components, moleFractions, Tlist[1]), simFunctions.guessPressure(components, moleFractions, Tlist[2])]
 
-        P = [equilibriumPressure(Tlist[0], guessP[0], components, moleFractions, [], [])[0],
-             equilibriumPressure(Tlist[1], guessP[1], components, moleFractions, [], [])[0],
-             equilibriumPressure(Tlist[2], guessP[2], components, moleFractions, [], [])[0]]
+        simResults = [equilibriumPressure(Tlist[0], guessP[0], components, moleFractions, [], []),
+             equilibriumPressure(Tlist[1], guessP[1], components, moleFractions, [], []),
+             equilibriumPressure(Tlist[2], guessP[2], components, moleFractions, [], [])]
         
+        P = [simResults[0][0], simResults[1][0], simResults[2][0]]
+
+        freezingPoints = [simResults[0][6], simResults[1][6], simResults[2][6]]
+        freezingPoint = min(freezingPoints, key=lambda x: abs(x - 273.15))
+
         betaGas = simFunctions.betaGas(Tlist, P)
 
         TDesired = simFunctions.tempConversion(tempUnit, TDesired, False)
         if inhibitor != "salt":
-            conc = simFunctions.getConcentration(T, TDesired, inhibitor, salt, betaGas, 1, 0)
+            conc = simFunctions.getConcentration(T, TDesired, inhibitor, salt, betaGas, 1, 0, freezingPoint)
             st.text("Minimum Concentration of " + str(inhibitorList[inhibitor]) + ": " + str(round(conc,1)) + "% w/w")
         else:
-            conc = simFunctions.getConcentration(T, TDesired, inhibitor, salt, betaGas, 0, 1)
+            conc = simFunctions.getConcentration(T, TDesired, inhibitor, salt, betaGas, 0, 1, freezingPoint)
             st.text("Minimum Concentration of " + str(saltList[salt]) + ": " + str(round(conc,1)) + "% w/w")
 
 st.caption("Disclaimer: The model and predictions have been tested and verified to be accurate based on extensive comparison with available literature data. However, this web app is provided ""as is"" and ""as available"" without any warranties of any kind, either express or implied, including, but not limited to, implied warranties of use, merchantability, fitness for a particular purpose, and non-infringement.")
