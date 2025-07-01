@@ -76,8 +76,8 @@ def PengRobinson(compoundData, moleFractions, T, P, interactionParameters):
             amix += (math.sqrt(a[i]*a[j]))*(1-interactionParameters[i][j])*moleFractions[i]*moleFractions[j]
             xia[i] += (math.sqrt(a[i]*a[j]))*(1-interactionParameters[i][j])*moleFractions[j]
             
-    A = amix*P/((R*T)**2)
-    B = (bmix*P)/(R*T)
+    A = float(amix*P/((R*T)**2))
+    B = float((bmix*P)/(R*T))
     
     Z = numpy.roots([1, -1+B, A-3*(B**2)-2*B, -1*A*B+B**2+B**3])
     
@@ -396,20 +396,22 @@ def checkMaxConc(inhibitorConcs):
 
 #For a given salt or inhibitor, determine its minimum concentration to achieve a given temperature inhibition from a given pure water equilibrium temperature
 def getConcentration(T, TDesired, inhibitor, salt, betaGas, noInhibitors, noSalts, freezingPoint):
-    inhibitorConcs = numpy.zeros(noInhibitors)
-    saltConcs = numpy.zeros(noSalts)
+    saltList, inhibitorList = getInhibitors()
     
+    inhibitorConcs = numpy.zeros(len(inhibitorList))
+    saltConcs = numpy.zeros(len(saltList))
+
     def f(conc, inhibitor):
         if inhibitor != "salt":
-            for i in range(noInhibitors):
+            for i in range(len(inhibitorList)):
                 if i == inhibitor:
-                    inhibitorConcs[i] = conc[0]
+                    inhibitorConcs[i] = conc
                 else:
                     inhibitorConcs[i] = 0
         else:
-            for i in range(noSalts):
+            for i in range(len(saltList)):
                 if i == salt:
-                    saltConcs[i] = conc[0]
+                    saltConcs[i] = conc
                 else:
                     saltConcs[i] = 0
         Tinhibited = HuLeeSum(T, saltConcs, inhibitorConcs, betaGas, freezingPoint)
@@ -677,7 +679,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
             mask[i] = True
         
     localPvapConsts = PvapConsts[mask]
-    
+
     try:
         if "I" in PvapConsts[:,0]:
             SIEqPressure = abs(scipy.optimize.fsolve(f,pGuess,xtol=errorMargin,args=temperature)[0])
@@ -720,7 +722,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
             mask[i] = True
         
     localPvapConsts = PvapConsts[mask]
-        
+
     try:
         SIIEqPressure = abs(scipy.optimize.fsolve(f,[pGuess],xtol=errorMargin,args=temperature)[0])
         SIIEqFrac = hydrateFugacity(temperature, SIIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]

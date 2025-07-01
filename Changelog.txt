@@ -1,3 +1,9 @@
 Web App:
 1. Fixed an issue where the minimum concentration calculator would crash under
    normal usage
+2. Fixed an issue where most inhibitor concentration calculations would result
+   in a required concentration of 1.0% w/w
+
+Backend:
+1. Fixed an issue that sometimes occured where data types would mismatch in the
+   equation of state calculation, resulting in a crash
