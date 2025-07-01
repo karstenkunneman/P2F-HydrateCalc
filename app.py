@@ -37,7 +37,7 @@ componentList = []
 for i in range(len(IDs)):
     componentList.append(compounds[i])
 
-st.image("Mines-horiz.png")
+st.image("Mines-horiz-white.png")
 
 c1, c2 = st.columns([2,0.9], gap="small")
 with c1:
@@ -51,11 +51,15 @@ with c2:
         base64.b64encode(open("thumbnail_P2F_logo(green) (FULL).png", "rb").read()).decode()
     ), unsafe_allow_html=True)
 
-st.caption('Version 1.3.0')
+st.caption('Version 1.3.1')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
 if programType == "Equilibrium Calculation":
+    def reset_widgets():
+        for key in st.session_state.items():
+            del st.session_state[key]
+
     #User temperature and guess pressure input file w/ template
     if st.toggle("Upload Temperatures/Pressures", False) == True:
         csvGuesses = st.file_uploader("Upload a .csv file containing temperatures/pressures, (optional) guess pressures/temperatures, and (optional) compositions for each point.", ['csv'])
@@ -252,7 +256,7 @@ if programType == "Equilibrium Calculation":
                 components += [pointComponents]
                 moleFractions += [pointMoleFractions]
             for i in range(len(components)):
-                if round(sum(moleFractions[i]),4) == 1 or confirmSumFrac == True:
+                if round(sum(moleFractions[i]),4) == 1:
                     confirmSumFrac = True
                 else:
                     st.markdown(f":red[Sum of component fractions in row " + str(i+1)+ " do not equal 1")
@@ -429,8 +433,7 @@ if programType == "Equilibrium Calculation":
 
         st.caption('NOTE: After selecting "Full Data Download" or "Download Plot", the page will appear to reset. If no changes are made to system parameters, just select "Calculate" again, and you can select other options as desired.')
 
-    if st.button("Reset"):
-        st.rerun()
+    st.text("To reset this application, please refresh your page (F5 on Windows or Command+R on Mac)")
 
 elif programType == "Minimum Concentration Calculation":
     tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F"], horizontal=True)
@@ -441,29 +444,56 @@ elif programType == "Minimum Concentration Calculation":
     moleFractions = []
 
     #Mole Fraction Input Table
-    c1, c2 = st.columns(2)
+    massFraction = st.toggle("Input Mass Fractions", False)
+    c1, c2, c3 = st.columns([1, 0.9, 1.1], gap="small")
     with c1:
-        compDf = pd.DataFrame([])
-        compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[0], 'Mole Fraction': 1.}])], ignore_index=True)
-        for i in range(len(componentList)-1):
-            compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[i+1], 'Mole Fraction': 0.}])], ignore_index=True)
+        if massFraction == False:
+            compDf = pd.DataFrame([])
+            compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[0], 'Mole Fraction': 1.}])], ignore_index=True)
+            for i in range(len(componentList)-1):
+                compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[i+1], 'Mole Fraction': 0.}])], ignore_index=True)
 
-        inputCompDf = st.data_editor(compDf, hide_index=True, column_config={
-            "Component": st.column_config.TextColumn("Component", disabled=True),
-            "Mole Fraction": st.column_config.NumberColumn("Mole Fraction"),
-        })
+            inputCompDf = st.data_editor(compDf, hide_index=True, column_config={
+                "Component": st.column_config.TextColumn("Component", disabled=True),
+                "Mole Fraction": st.column_config.NumberColumn("Mole Fraction"),
+            })
 
-        moleFracInput = inputCompDf['Mole Fraction'].tolist()
+            moleFracInput = inputCompDf['Mole Fraction'].tolist()
 
-        for i in range(len(componentList)):
-            components.append(i + 1)
-            moleFractions.append(round(moleFracInput[i],4))
+            for i in range(len(componentList)):
+                components.append(i + 1)
+                moleFractions.append(round(moleFracInput[i],4))
+        else:
+            massFractions = []
+            compDf = pd.DataFrame([])
+            compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[0], 'Mass Fraction': 1.}])], ignore_index=True)
+            for i in range(len(componentList)-1):
+                compDf = pd.concat([compDf, pd.DataFrame([{'Component': componentList[i+1], 'Mass Fraction': 0.}])], ignore_index=True)
 
-    st.text("Sum of Mole Fractions: " + str(round(sum(moleFractions),4)))
+            inputCompDf = st.data_editor(compDf, hide_index=True, column_config={
+                "Component": st.column_config.TextColumn("Component", disabled=True),
+                "Mass Fraction": st.column_config.NumberColumn("Mass Fraction"),
+            })
+
+            massFracInput = inputCompDf['Mass Fraction'].tolist()
+
+            for i in range(len(componentList)):
+                components.append(i + 1)
+                massFractions.append(round(massFracInput[i],4))
 
     normalizeFracs = st.toggle("Normalize Mole Fractions", False)
 
     with c2:
+        if massFraction == True:
+            moleFractions = simFunctions.massToMolFrac(compounds, massFractions)
+
+            normDf = pd.DataFrame([])
+            for i in range(len(componentList)):
+                normDf = pd.concat([normDf, pd.DataFrame([{'Component': componentList[i], 'Mole Fraction': moleFractions[i]}])], ignore_index=True)
+
+            inputCompDf = st.dataframe(normDf, hide_index=True)
+
+    with c3:
         if normalizeFracs == True:
             nonNormalSum = sum(moleFractions)
 
@@ -472,7 +502,7 @@ elif programType == "Minimum Concentration Calculation":
 
             normDf = pd.DataFrame([])
             for i in range(len(componentList)):
-                normDf = pd.concat([normDf, pd.DataFrame([{'Component': componentList[i], 'Normalized Mole Fraction': moleFractions[i]}])], ignore_index=True)
+                normDf = pd.concat([normDf, pd.DataFrame([{'Component': componentList[i], 'Normalized Mole Frac.': moleFractions[i]}])], ignore_index=True)
 
             inputCompDf = st.dataframe(normDf, hide_index=True)
 

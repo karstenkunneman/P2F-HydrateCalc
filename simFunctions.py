@@ -559,6 +559,7 @@ def hydrateDensity(structure, occupancies, compoundData, moleFractions, T, P):
 
 def generateOutput(componentNames, moleFractions, salts, saltConcs, inhibitors, 
                    inhibitorConcs, T, TInhibited, P, convergence, IDs):
+    numpy.set_printoptions(suppress=True)
     with open("Output Template.csv", newline='', encoding='utf-8-sig') as csvfile:
         reader = list(csv.reader(csvfile))
 
@@ -575,7 +576,7 @@ def generateOutput(componentNames, moleFractions, salts, saltConcs, inhibitors,
             try:
                 insertList = [T[i]-273.15, TInhibited[i]-273.15, P[i], convergence[i][1], str(convergence[i][2][0]), str(convergence[i][2][1]), convergence[i][3], convergence[i][4], convergence[i][5]]
             except:
-                insertList = [T[i]-273.15, None, P[i], convergence[i][1], str(convergence[i][2][0]), str(convergence[i][2][1]), convergence[i][3], convergence[i][4], convergence[i][5]]
+                insertList = [T[i]-273.15, None, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
             for j in range(len(IDs)):
                 if int(j+1) in componentNames[i]:
                     index = componentNames[i].index(int(j+1))
@@ -741,7 +742,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
     else:
         equilPhase = "L-H-V"
 
-    return eqPressure, eqStructure, EqFrac, hydrationNumber(eqStructure, EqFrac), hydrateDensity(eqStructure, EqFrac, compoundData, moleFractions, temperature, eqPressure), equilPhase, freezingPoint
+    return eqPressure, eqStructure, numpy.round(EqFrac, 4), hydrationNumber(eqStructure, EqFrac), hydrateDensity(eqStructure, EqFrac, compoundData, moleFractions, temperature, eqPressure), equilPhase, freezingPoint
 
 def equilibriumTemperature(temperature, pressure, compounds, moleFractions, saltConcs, inhibitorConcs):
     noCompounds = len(compounds)
@@ -877,4 +878,4 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
     else:
         equilPhase = "L-H-V"
 
-    return eqTemperature, eqStructure, EqFrac, hydrationNumber(eqStructure, EqFrac), hydrateDensity(eqStructure, EqFrac, compoundData, moleFractions, eqTemperature, pressure), equilPhase, freezingPoint
+    return eqTemperature, eqStructure, numpy.round(EqFrac, 4), hydrationNumber(eqStructure, EqFrac), hydrateDensity(eqStructure, EqFrac, compoundData, moleFractions, eqTemperature, pressure), equilPhase, freezingPoint
