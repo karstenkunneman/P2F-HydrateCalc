@@ -577,6 +577,7 @@ def generateOutput(componentNames, moleFractions, salts, saltConcs, inhibitors,
                 lineNo += 1
                
         for i in range(len(T)):
+            P[i] *= 10
             try:
                 insertList = [T[i]-273.15, TInhibited[i]-273.15, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
             except:
