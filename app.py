@@ -178,13 +178,14 @@ if programType == "Equilibrium Calculation":
         })
         inhibitorConcs = inputInhibitorDf['Wt. %'].tolist()
 
-    #Unit Selector
-    tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F"], horizontal=True)
-    pressureUnit = st.radio("Pressure Unit", ["MPa", "bar", "psia"], horizontal=True)
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F"], horizontal=True)
+    with c2:
+        pressureUnit = st.radio("Pressure Unit", ["MPa", "bar", "psia"], horizontal=True)
+    with c3:
+        definedVariable = st.radio("Defined Variable", ["T", "P"], horizontal=True)
     pressureScale = "Standard" #st.radio("Pressure Scale", ["Standard", "Logarithmic"], horizontal=True)
-
-    #Defined Variable Selector
-    definedVariable = st.radio("Defined Variable", ["T", "P"], horizontal=True)
 
     #If no input file given, take inputs from user through UI
     if csvGuesses == None:
