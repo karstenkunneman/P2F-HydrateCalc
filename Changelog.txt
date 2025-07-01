@@ -4,6 +4,12 @@ Web App:
 2. Fixed an issue where most inhibitor concentration calculations would result
    in a required concentration of 1.0% w/w
 3. Rearranged unit and variable selection buttons to reduce user scrolling
+4. Fixed an issue where the occupancy output on the full data table would not show
+   commas between occupancies
+
+Commandline:
+1. Fixed an issue where the occupancy output on the full data table would not show
+   commas between occupancies
 
 Backend:
 1. Fixed an issue that sometimes occured where data types would mismatch in the
