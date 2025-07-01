@@ -566,15 +566,17 @@ def generateOutput(componentNames, moleFractions, salts, saltConcs, inhibitors,
         reader = list(csv.reader(csvfile))
 
         #Add salts and inhibitors
+        lineNo = 0
         for i in range(len(salts)):
             if saltConcs[i] != 0:
-                reader.insert(3+i, [salts[i],saltConcs[i]])
+                reader.insert(3+lineNo, [salts[i],saltConcs[i]])
+                lineNo += 1
         for i in range(len(inhibitors)):
             if inhibitorConcs[i] != 0:
-                reader.insert(len(salts)+3+i, [inhibitors[i],inhibitorConcs[i]])
+                reader.insert(3+lineNo, [inhibitors[i],inhibitorConcs[i]])
+                lineNo += 1
                
         for i in range(len(T)):
-            P[i] *= 1E-5
             try:
                 insertList = [T[i]-273.15, TInhibited[i]-273.15, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
             except:

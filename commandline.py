@@ -219,7 +219,7 @@ print("Time to Complete Calculation: " + str(round(endTime-startTime, 3)) + " se
 print("per Data Point: " + str(round((endTime-startTime)/noPoints, 3)) + " seconds")
 
 with open(exportFileName, mode = 'w', newline='') as file:
-    data = simFunctions.generateOutput(components, moleFractions, salts, saltConcs, inhibitors, inhibitorConcs, T, TInhibited, P, convergence, IDs)
+    data = simFunctions.generateOutput(components, moleFractions, salts, saltConcs, inhibitors, inhibitorConcs, T, TInhibited, eqPressure, convergence, IDs)
     writer = csv.writer(file)
     writer.writerows(data)
 
