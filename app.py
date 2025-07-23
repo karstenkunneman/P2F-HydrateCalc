@@ -37,7 +37,7 @@ componentList = []
 for i in range(len(IDs)):
     componentList.append(compounds[i])
 
-st.image("Mines-horiz-white.png")
+st.image("Mines-horiz-white.png",width=200)
 
 c1, c2 = st.columns([2,0.9], gap="small")
 with c1:
