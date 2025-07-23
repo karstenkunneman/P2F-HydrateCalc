@@ -116,6 +116,7 @@ if programType == "Equilibrium Calculation":
                     components.append(i + 1)
                     massFractions.append(round(massFracInput[i],4))
 
+        normalizeFracs = st.toggle("Normalize Mole Fractions", False)
 
         with c2:
             if massFraction == True:
@@ -151,7 +152,7 @@ if programType == "Equilibrium Calculation":
         else:
             confirmSumFrac = False
 
-        normalizeFracs = st.toggle("Normalize Mole Fractions", False)
+ 
 
     inhibitorConcs = []
     saltConcs = []
