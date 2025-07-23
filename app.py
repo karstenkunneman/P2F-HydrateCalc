@@ -440,7 +440,7 @@ if programType == "Equilibrium Calculation":
         with c2:
             img = io.BytesIO()
             plt.savefig(img, format='png')
-            downloadButton = st.download_button(label="Save Plot", data=img, file_name="Plot.png", mime="image/png")
+            downloadButton = st.download_button(label="Save Plot", data=img, file_name="Plot.png", mime="image/png", on_click="ignore")
         st.text("Full dataset includes temperature, inhibited temperature, pressure, structure, small and large cage occupancy, hydration number, hydrate density, and phase for each point")
 
         st.caption('NOTE: After selecting "Full Data Download" or "Download Plot", the page will appear to reset. If no changes are made to system parameters, just select "Calculate" again, and you can select other options as desired.')
