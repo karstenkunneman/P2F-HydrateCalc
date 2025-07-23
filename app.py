@@ -206,9 +206,9 @@ if programType == "Equilibrium Calculation":
             if definedVariable == "T":
                 c1, c2 = st.columns(2)
                 with c1:
-                    minTemp = float(st.text_input('Minimum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 240.2, False), 1)))
+                    minTemp = float(st.text_input('Minimum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 273.15, False), 1)))
                 with c2:
-                    maxTemp = float(st.text_input('Maximum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 302.1, False), 1)))
+                    maxTemp = float(st.text_input('Maximum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 303.15, False), 1)))
                 noPoints = st.number_input('Number of Points', 1, None, 4, 1)
                 T = numpy.arange(minTemp, maxTemp+(maxTemp-minTemp)/noPoints, (maxTemp-minTemp)/(noPoints-1))
                 T = [round(i, 1) for i in T]
@@ -580,8 +580,8 @@ st.caption("Disclaimer: The model and predictions have been tested and verified 
 st.header('Credits')
 st.markdown('''
             Developed by Karsten Kunneman in collaboration with Prof. Amadeu K. Sum at the Colorado School of Mines
-            \nHydrate model: Klauda-Sandler fugacity model [[doi:10.1021/ie000322b]](https://doi.org/10.1021/ie000322b)
-            \nInhibition model: HLS correlation [[doi:10.1002/aic.16369]](https://doi.org/10.1002/aic.16369)
+            \nHydrate model: Klauda-Sandler fugacity model [[doi: 10.1021/ie000322b]](https://doi.org/10.1021/ie000322b)
+            \nInhibition model: HLS correlation [[doi: 10.1002/aic.16369]](https://doi.org/10.1002/aic.16369)
             \nThis site is created with Streamlit''')
 st.markdown('''Questions, suggestions, or bug reports? Please contact Dr. Amadeu K. Sum at asum@mines.edu''')
 st.markdown(f'''<a href="https://github.com/karstenkunneman/Gas-Hydrate-Equilibrium-Calculator">Github Repo</a>''', unsafe_allow_html=True)
