@@ -162,7 +162,7 @@ if programType == "Equilibrium Calculation":
     saltConcs = numpy.zeros(len(salts))
     inhibitorConcs = numpy.zeros(len(inhibitors))
 
-    notFreshWater = st.toggle("Add Inhbitors?", False)
+    notFreshWater = st.toggle("Add Thermodynamic Inhbitors?", False)
 
     if notFreshWater:
         c1, c2 = st.columns(2, gap="medium")
