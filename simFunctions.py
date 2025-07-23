@@ -579,9 +579,9 @@ def generateOutput(componentNames, moleFractions, salts, saltConcs, inhibitors,
         for i in range(len(T)):
             P[i] *= 10
             try:
-                insertList = [T[i]-273.15, TInhibited[i]-273.15, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
+                insertList = [T[i], TInhibited[i], P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
             except:
-                insertList = [T[i]-273.15, None, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
+                insertList = [T[i], None, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
             for j in range(len(IDs)):
                 if int(j+1) in componentNames[i]:
                     index = componentNames[i].index(int(j+1))

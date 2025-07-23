@@ -1,5 +1,5 @@
 ﻿P2F Lab :: Gas Hydrate Equilibrium Predictions Calculator,,,,,,,,,,,,,,,,,,
-Version 1.3.1,,,,,,,,,,,,,,,,,,
+Version 1.3.3,,,,,,,,,,,,,,,,,,
 Inhibitor,wt%,,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,,,
 Temp. (°C),Inhibited Temp. (°C),Pressure (bar),Eq. Structure,Small Cage Occupancies,Large Cage Occupancies,Hydration Number,Hydrate Density (kg/m^3),Phases,CH4,C2H6,C3H8,N2,CO2,i-C4H10,C5H12,C6H14,O2,H2S

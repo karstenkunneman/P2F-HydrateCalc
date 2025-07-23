@@ -51,7 +51,7 @@ with c2:
         base64.b64encode(open("thumbnail_P2F_logo(green) (FULL).png", "rb").read()).decode()
     ), unsafe_allow_html=True)
 
-st.caption('Version 1.3.2')
+st.caption('Version 1.3.3')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
@@ -95,6 +95,9 @@ if programType == "Equilibrium Calculation":
                 for i in range(len(componentList)):
                     components.append(i + 1)
                     moleFractions.append(round(moleFracInput[i],4))
+
+                moleFractions = numpy.nan_to_num(moleFractions, copy=None, nan=0)
+                    
             else:
                 massFractions = []
                 compDf = pd.DataFrame([])
@@ -138,7 +141,7 @@ if programType == "Equilibrium Calculation":
 
                 inputCompDf = st.dataframe(normDf, hide_index=True)
 
-        nonZeroFracs = numpy.nonzero(moleFractions)[0]
+        nonZeroFracs = numpy.nonzero(numpy.nan_to_num(moleFractions, copy=None, nan=0))[0]
         moleFractions = [element for index, element in enumerate(moleFractions) if index in nonZeroFracs]
         components = [element for index, element in enumerate(components) if index in nonZeroFracs]
 
@@ -154,28 +157,34 @@ if programType == "Equilibrium Calculation":
     #Inhibitor Concentration input Tables
     salts, inhibitors = simFunctions.getInhibitors()
 
-    c1, c2 = st.columns(2, gap="medium")
-    with c1:
-        st.caption("Input Salt Concentration (wt%) based on water amount")
-        saltConcDf = pd.DataFrame([])
-        for i in range(len(salts)):
-            saltConcDf = pd.concat([saltConcDf, pd.DataFrame([{'Salt': salts[i], 'Wt. %': 0.}])], ignore_index=True)
-        inputSaltDf = st.data_editor(saltConcDf, hide_index=True, column_config={
-            "Salt": st.column_config.TextColumn("Salt", disabled=True),
-            "Wt. %": st.column_config.NumberColumn("Wt. %"),
-        })
-        saltConcs = inputSaltDf['Wt. %'].tolist()
+    saltConcs = numpy.zeros(len(salts))
+    inhibitorConcs = numpy.zeros(len(inhibitors))
 
-    with c2:
-        st.caption("Organic Inhibitor Concentration (wt%) based on salt aqueous solutions")
-        inhibitorConcDf = pd.DataFrame([])
-        for i in range(len(inhibitors)):
-            inhibitorConcDf = pd.concat([inhibitorConcDf, pd.DataFrame([{'Inhibitor': inhibitors[i], 'Wt. %': 0., 'Max. Conc.': inhibitorData[i][5]}])], ignore_index=True)
-        inputInhibitorDf = st.data_editor(inhibitorConcDf, hide_index=True, column_config={
-            "Inhibitor": st.column_config.TextColumn("Inhibitor", disabled=True),
-            "Wt. %": st.column_config.NumberColumn("Wt. %"),
-            "Max. Conc.": st.column_config.TextColumn("Max. Conc.", disabled=True)
-        })
+    notFreshWater = st.toggle("Add Inhbitors?", False)
+
+    if notFreshWater:
+        c1, c2 = st.columns(2, gap="medium")
+        with c1:
+            st.caption("Input Salt Concentration (wt%) based on water amount")
+            saltConcDf = pd.DataFrame([])
+            for i in range(len(salts)):
+                saltConcDf = pd.concat([saltConcDf, pd.DataFrame([{'Salt': salts[i], 'Wt. %': 0.}])], ignore_index=True)
+            inputSaltDf = st.data_editor(saltConcDf, hide_index=True, column_config={
+                "Salt": st.column_config.TextColumn("Salt", disabled=True),
+                "Wt. %": st.column_config.NumberColumn("Wt. %"),
+            })
+            saltConcs = inputSaltDf['Wt. %'].tolist()
+
+        with c2:
+            st.caption("Organic Inhibitor Concentration (wt%) based on salt aqueous solutions")
+            inhibitorConcDf = pd.DataFrame([])
+            for i in range(len(inhibitors)):
+                inhibitorConcDf = pd.concat([inhibitorConcDf, pd.DataFrame([{'Inhibitor': inhibitors[i], 'Wt. %': 0., 'Max. Conc.': inhibitorData[i][5]}])], ignore_index=True)
+            inputInhibitorDf = st.data_editor(inhibitorConcDf, hide_index=True, column_config={
+                "Inhibitor": st.column_config.TextColumn("Inhibitor", disabled=True),
+                "Wt. %": st.column_config.NumberColumn("Wt. %"),
+                "Max. Conc.": st.column_config.TextColumn("Max. Conc.", disabled=True)
+            })
         inhibitorConcs = inputInhibitorDf['Wt. %'].tolist()
 
     c1, c2, c3 = st.columns(3)
@@ -572,4 +581,5 @@ st.markdown('''
             \nHydrate model: Klauda-Sandler fugacity model [[doi:10.1021/ie000322b]](https://doi.org/10.1021/ie000322b)
             \nInhibition model: HLS correlation [[doi:10.1002/aic.16369]](https://doi.org/10.1002/aic.16369)
             \nThis site is created with Streamlit''')
+st.markdown('''Questions, suggestions, or bug reports? Please contact Dr. Amadeu K. Sum at asum@mines.edu''')
 st.markdown(f'''<a href="https://github.com/karstenkunneman/Gas-Hydrate-Equilibrium-Calculator">Github Repo</a>''', unsafe_allow_html=True)

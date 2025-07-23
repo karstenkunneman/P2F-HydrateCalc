@@ -1,5 +1,11 @@
 Web Application:
 1. Pressure output in full data file will now correctly display in bar
+2. CSM Logo made significantly smaller
+3. Fixed an issue where file output temperatures would be significantly lower than expected
+4. Added contact email
+5. Fixed an issue where having a "None" value in the mole fraction input would lead to a crash
+6. Added back the option to toggle between showing or hiding the inhibitor concentration table
 
 Commandline:
 1. Pressure output in full data file will now correctly display in bar
+2. Fixed an issue where file output temperatures would be significantly lower than expected
