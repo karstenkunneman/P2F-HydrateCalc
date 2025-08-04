@@ -37,7 +37,7 @@ componentList = []
 for i in range(len(IDs)):
     componentList.append(compounds[i])
 
-st.image("Mines-horiz-white.png",width=200)
+st.image("Mines-horiz-white.png",width=400)
 
 c1, c2 = st.columns([2,0.9], gap="small")
 with c1:
@@ -152,6 +152,8 @@ if programType == "Equilibrium Calculation":
         else:
             confirmSumFrac = False
 
+ 
+
     inhibitorConcs = []
     saltConcs = []
     #Inhibitor Concentration input Tables
@@ -160,7 +162,7 @@ if programType == "Equilibrium Calculation":
     saltConcs = numpy.zeros(len(salts))
     inhibitorConcs = numpy.zeros(len(inhibitors))
 
-    notFreshWater = st.toggle("Add Inhbitors?", False)
+    notFreshWater = st.toggle("Add Thermodynamic Inhbitors?", False)
 
     if notFreshWater:
         c1, c2 = st.columns(2, gap="medium")
@@ -204,9 +206,9 @@ if programType == "Equilibrium Calculation":
             if definedVariable == "T":
                 c1, c2 = st.columns(2)
                 with c1:
-                    minTemp = float(st.text_input('Minimum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 240.2, False), 1)))
+                    minTemp = float(st.text_input('Minimum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 273.15, False), 1)))
                 with c2:
-                    maxTemp = float(st.text_input('Maximum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 302.1, False), 1)))
+                    maxTemp = float(st.text_input('Maximum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 303.15, False), 1)))
                 noPoints = st.number_input('Number of Points', 1, None, 4, 1)
                 T = numpy.arange(minTemp, maxTemp+(maxTemp-minTemp)/noPoints, (maxTemp-minTemp)/(noPoints-1))
                 T = [round(i, 1) for i in T]
@@ -575,11 +577,12 @@ elif programType == "Minimum Concentration Calculation":
 
 st.caption("Disclaimer: The model and predictions have been tested and verified to be accurate based on extensive comparison with available literature data. However, this web app is provided ""as is"" and ""as available"" without any warranties of any kind, either express or implied, including, but not limited to, implied warranties of use, merchantability, fitness for a particular purpose, and non-infringement.")
 
+st.markdown('''Questions, suggestions, or bug reports? Please send an email to asum@mines.edu''')
+
 st.header('Credits')
 st.markdown('''
             Developed by Karsten Kunneman in collaboration with Prof. Amadeu K. Sum at the Colorado School of Mines
-            \nHydrate model: Klauda-Sandler fugacity model [[doi:10.1021/ie000322b]](https://doi.org/10.1021/ie000322b)
-            \nInhibition model: HLS correlation [[doi:10.1002/aic.16369]](https://doi.org/10.1002/aic.16369)
+            \nHydrate model: Klauda-Sandler fugacity model [[doi: 10.1021/ie000322b]](https://doi.org/10.1021/ie000322b)
+            \nInhibition model: HLS correlation [[doi: 10.1002/aic.16369]](https://doi.org/10.1002/aic.16369)
             \nThis site is created with Streamlit''')
-st.markdown('''Questions, suggestions, or bug reports? Please contact Dr. Amadeu K. Sum at asum@mines.edu''')
 st.markdown(f'''<a href="https://github.com/karstenkunneman/Gas-Hydrate-Equilibrium-Calculator">Github Repo</a>''', unsafe_allow_html=True)
