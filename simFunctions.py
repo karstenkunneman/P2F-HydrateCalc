@@ -509,7 +509,7 @@ def guessTemp(compounds, moleFractions, P):
         constantB *= moleFractions[i]*guessConsts[i][3]
     
     constantA = constantA**(1/noCompounds)
-    constantB = constantA**(1/noCompounds)
+    constantB = constantB**(1/noCompounds)
 
     guessTemp = math.log(P/constantA)/constantB
 
@@ -521,7 +521,7 @@ def guessTemp(compounds, moleFractions, P):
             constantB *= moleFractions[i]*guessConsts[i][3]
 
     constantA = constantA**(1/noCompounds)
-    constantB = constantA**(1/noCompounds)
+    constantB = constantB**(1/noCompounds)
     
     guessTemp = math.log(P/constantA)/constantB
 
