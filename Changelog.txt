@@ -1,3 +1,3 @@
 Backend:
-1. Changed the ordering of components to be less confusing
-2. Fixed an issue with temperature guessing
+1. Moved the "Sum of Mole Fractions" display
+2. Fixed an issue with temperature guessing in multicomponent systems

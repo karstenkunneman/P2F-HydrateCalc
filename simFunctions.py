@@ -497,33 +497,10 @@ def guessPressure(compounds, moleFractions, T):
         return guessPressure**(1/noCompounds)
 
 def guessTemp(compounds, moleFractions, P):
-    noCompounds = len(compounds)
-    guessConsts = numpy.array(guessConstants.loc[guessConstants['Compound ID'] == compounds[0]])
-    for i in range(noCompounds-1):
-        guessConsts = numpy.append(guessConsts, guessConstants.loc[guessConstants['Compound ID'] == compounds[i+1]], axis = 0)
-
-    constantA = 1
-    constantB = 1
-    for i in range(noCompounds):
-        constantA *= moleFractions[i]*guessConsts[i][2]
-        constantB *= moleFractions[i]*guessConsts[i][3]
+    def pressureMatch(guessT, P, compounds, moleFractions):
+        return P - guessPressure(compounds, moleFractions, guessT)
     
-    constantA = constantA**(1/noCompounds)
-    constantB = constantB**(1/noCompounds)
-
-    guessTemp = math.log(P/constantA)/constantB
-
-    if guessTemp >= 273.15:
-        constantA = 1
-        constantB = 1
-        for i in range(noCompounds):
-            constantA *= moleFractions[i]*guessConsts[i][2]
-            constantB *= moleFractions[i]*guessConsts[i][3]
-
-    constantA = constantA**(1/noCompounds)
-    constantB = constantB**(1/noCompounds)
-    
-    guessTemp = math.log(P/constantA)/constantB
+    guessTemp = scipy.optimize.fsolve(pressureMatch, [273.15], args = (P, compounds, moleFractions))
 
     return guessTemp
 

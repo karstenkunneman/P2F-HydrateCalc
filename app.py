@@ -51,7 +51,7 @@ with c2:
         base64.b64encode(open("thumbnail_P2F_logo(green) (FULL).png", "rb").read()).decode()
     ), unsafe_allow_html=True)
 
-st.caption('Version 1.3.4')
+st.caption('Version 1.3.5')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
@@ -116,7 +116,10 @@ if programType == "Equilibrium Calculation":
                     components.append(i + 1)
                     massFractions.append(round(massFracInput[i],4))
 
-        normalizeFracs = st.toggle("Normalize Mole Fractions", False)
+        c21, c22 = st.columns(2)
+
+        with c21:
+            normalizeFracs = st.toggle("Normalize Mole Fractions", False)
 
         with c2:
             if massFraction == True:
@@ -145,7 +148,8 @@ if programType == "Equilibrium Calculation":
         moleFractions = [element for index, element in enumerate(moleFractions) if index in nonZeroFracs]
         components = [element for index, element in enumerate(components) if index in nonZeroFracs]
 
-        st.text("Sum of Mole Fractions: " + str(round(sum(moleFractions),4)))
+        with c22:
+            st.text("Sum of Mole Fractions: " + str(round(sum(moleFractions),4)))
 
         if sum(moleFractions) == 1:
             confirmSumFrac = True
@@ -206,9 +210,9 @@ if programType == "Equilibrium Calculation":
             if definedVariable == "T":
                 c1, c2 = st.columns(2)
                 with c1:
-                    minTemp = float(st.text_input('Minimum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 273.15, False), 1)))
+                    minTemp = float(st.text_input('Minimum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 198.2, False), 1)))
                 with c2:
-                    maxTemp = float(st.text_input('Maximum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 303.15, False), 1)))
+                    maxTemp = float(st.text_input('Maximum Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 299.3, False), 1)))
                 noPoints = st.number_input('Number of Points', 1, None, 4, 1)
                 T = numpy.arange(minTemp, maxTemp+(maxTemp-minTemp)/noPoints, (maxTemp-minTemp)/(noPoints-1))
                 T = [round(i, 1) for i in T]
@@ -224,9 +228,9 @@ if programType == "Equilibrium Calculation":
             else:
                 c1, c2 = st.columns(2)
                 with c1:
-                    minPressure = float(st.text_input('Minimum Pressure ('+pressureUnit+')', round(simFunctions.pressureConversion(pressureUnit, 0.995, False),3)))
+                    minPressure = float(st.text_input('Minimum Pressure ('+pressureUnit+')', round(simFunctions.pressureConversion(pressureUnit, 0.131, False),3)))
                 with c2:
-                    maxPressure = float(st.text_input('Maximum Pressure ('+pressureUnit+')', round(simFunctions.pressureConversion(pressureUnit, 74.291, False),3)))
+                    maxPressure = float(st.text_input('Maximum Pressure ('+pressureUnit+')', round(simFunctions.pressureConversion(pressureUnit, 54.7, False),3)))
                 noPoints = st.number_input('Number of Points', 1, None, 4, 1)
                 P = numpy.arange(maxPressure, minPressure-(maxPressure-minPressure)/noPoints, -1*(maxPressure-minPressure)/(noPoints-1))
 
