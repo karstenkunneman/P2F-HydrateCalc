@@ -1,5 +1,2 @@
 Web Application:
-1. Moved the "Sum of Mole Fractions" display
-
-Backend:
-1. Fixed an issue with temperature guessing in multicomponent systems
+1. Fixed an issue where uploading system compositions would result in components offset by 1

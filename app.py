@@ -51,7 +51,7 @@ with c2:
         base64.b64encode(open("thumbnail_P2F_logo(green) (FULL).png", "rb").read()).decode()
     ), unsafe_allow_html=True)
 
-st.caption('Version 1.3.5')
+st.caption('Version 1.3.6')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
@@ -267,7 +267,7 @@ if programType == "Equilibrium Calculation":
                 pointMoleFractions = []
                 for j in range(len(IDs)):
                     if guessFile[:,2+j][i] != 0 and numpy.isnan(guessFile[:,2+j][i]) == False:
-                        pointComponents.append(j+1)
+                        pointComponents.append(j)
                         pointMoleFractions.append(guessFile[:,2+j][i])
                 components += [pointComponents]
                 moleFractions += [pointMoleFractions]
