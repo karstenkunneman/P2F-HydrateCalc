@@ -11,6 +11,7 @@ from matplotlib import font_manager as fmgr, rcParams
 import time
 import io
 import base64
+import math
 
 inhibitorData = pd.read_excel('Data.xlsx', sheet_name='Inhibitor Data').to_numpy()
 
@@ -51,7 +52,7 @@ with c2:
         base64.b64encode(open("thumbnail_P2F_logo(green) (FULL).png", "rb").read()).decode()
     ), unsafe_allow_html=True)
 
-st.caption('Version 1.3.6')
+st.caption('Version 1.3.7')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
@@ -64,13 +65,14 @@ if programType == "Equilibrium Calculation":
     if st.toggle("Upload Temperatures/Pressures", False) == True:
         csvGuesses = st.file_uploader("Upload a .csv file containing temperatures/pressures, (optional) guess pressures/temperatures, and (optional) compositions for each point.", ['csv'])
         csvTemplate = st.download_button("Guess File Template", open("Input Template.csv", encoding='utf-8'), file_name="Input Template.csv")
+        manualComp = False
     else:
         csvGuesses = None
         manualComp = True
     
     if csvGuesses != None:
         manualComp = st.toggle('Manual Component Input', False)
-        userGuess = st.toggle('Guess Pressures from File?', True)
+        userGuess = st.toggle('Guess from File?', False)
 
     components = []
     moleFractions = []
@@ -156,8 +158,6 @@ if programType == "Equilibrium Calculation":
         else:
             confirmSumFrac = False
 
- 
-
     inhibitorConcs = []
     saltConcs = []
     #Inhibitor Concentration input Tables
@@ -197,7 +197,7 @@ if programType == "Equilibrium Calculation":
     with c1:
         tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F"], horizontal=True)
     with c2:
-        pressureUnit = st.radio("Pressure Unit", ["MPa", "bar", "psia"], horizontal=True)
+        pressureUnit = st.radio("Pressure Unit", ["MPa", "bar", "psia"], horizontal=True, index=0)
     with c3:
         definedVariable = st.radio("Defined Variable", ["T", "P"], horizontal=True)
     pressureScale = "Standard" #st.radio("Pressure Scale", ["Standard", "Logarithmic"], horizontal=True)
@@ -254,23 +254,34 @@ if programType == "Equilibrium Calculation":
 
     else:
         guessFile = numpy.genfromtxt(csvGuesses, delimiter=',', skip_header=1)
-        T = guessFile[:,0]
-        P = guessFile[:,1]
-        noPoints = len(T)
+        if definedVariable == "T":
+            T = guessFile[:,0]
+            noPoints = len(T)
+        else:
+            P = guessFile[:,1]
+            noPoints = len(P)
         if noPoints > 1:
             calculateRange = True
         else:
             calculateRange = False
         if manualComp == False:
-            for i in range(len(T)):
+            for i in range(noPoints):
                 pointComponents = []
                 pointMoleFractions = []
                 for j in range(len(IDs)):
                     if guessFile[:,2+j][i] != 0 and numpy.isnan(guessFile[:,2+j][i]) == False:
-                        pointComponents.append(j)
+                        pointComponents.append(j+1)
                         pointMoleFractions.append(guessFile[:,2+j][i])
                 components += [pointComponents]
                 moleFractions += [pointMoleFractions]
+                if any(item is not None for item in components[i]):
+                    pass
+                else:
+                    components[i] = components[i-1]
+                if any(item is not None for item in moleFractions[i]):
+                    pass
+                else:
+                    moleFractions[i] = moleFractions[i-1]
             for i in range(len(components)):
                 if round(sum(moleFractions[i]),4) == 1:
                     confirmSumFrac = True
@@ -280,11 +291,36 @@ if programType == "Equilibrium Calculation":
         else:
             components = [components for i in range(noPoints)]
             moleFractions = [moleFractions for i in range(noPoints)]
-        if userGuess == False:
-            P = [0 for i in range(noPoints)]
-            for i in range(noPoints):
-                T[i] = simFunctions.tempConversion(tempUnit, T[i], True)
-                P[i] = simFunctions.guessPressure(components[i], moleFractions[i], T[i])/1E6
+
+        if definedVariable == "T":
+            P = guessFile[:,1]
+            if userGuess != True:
+                P = [0 for i in range(noPoints)]
+                for i in range(noPoints):
+                    P[i] = simFunctions.guessPressure(components[i], moleFractions[i], T[i])/1E6
+            else:
+                for i in range(noPoints):
+                    if P[i] is None or math.isnan(P[i]):
+                        st.markdown(f":red[Guess pressure(s) missing, turn off manual guessing if this is intentional]")
+                        break
+                    if T[i] is None or math.isnan(T[i]):
+                        st.markdown(f":red[Temperature(s) missing, change defined variable if this is intentional]")
+                        break
+                
+        else:
+            T = guessFile[:,0]
+            if userGuess != True:
+                T = [0 for i in range(noPoints)]
+                for i in range(noPoints):
+                    T[i] = simFunctions.guessTemp(components[i], moleFractions[i], P[i]*1E6)
+            else:
+                for i in range(noPoints):
+                    if T[i] is None or math.isnan(T[i]):
+                        st.markdown(f":red[Guess temperature(s) missing, turn off manual guessing if this is intentional]")
+                        break
+                    if P[i] is None or math.isnan(P[i]):
+                        st.markdown(f":red[Pressure(s) missing, change defined variable if this is intentional]")
+                        break
 
     calculated = False
     if st.button("Calculate"):
@@ -292,14 +328,6 @@ if programType == "Equilibrium Calculation":
             startTime = time.time()
             eqPressure = [0 for i in range(len(T))]
             eqTemperature = [0 for i in range(len(P))]
-            if csvGuesses == None and manualComp == True:
-                if definedVariable == "T":
-                    for i in range(len(T)):
-                        if userGuess == True:
-                            P[i] = simFunctions.pressureConversion(pressureUnit, P[i], False)
-                elif definedVariable == "P":
-                    for i in range(len(P)):
-                        T[i] = simFunctions.tempConversion(tempUnit, T[i], False)
 
             simResult = [[] for i in range(len(T))]
             eqStructure = [0 for i in range(len(T))]
@@ -433,10 +461,10 @@ if programType == "Equilibrium Calculation":
             T = eqTemperature
         if sum(inhibitorConcs) + sum(saltConcs) != 0:
             displayData = pd.DataFrame({'Temperature ('+tempUnit+')': T, 'Inhibited T ('+tempUnit+')': TInhibited, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure}, [i for i in range(len(T))])
-            data = pd.DataFrame(simFunctions.generateOutput(components, moleFractions, salts, saltConcs, inhibitors, inhibitorConcs, T, TInhibited, P, simResult, IDs))
+            data = pd.DataFrame(simFunctions.generateOutput(compounds, components, moleFractions, salts, saltConcs, inhibitors, inhibitorConcs, T, TInhibited, P, simResult, IDs))
         else:
             displayData = pd.DataFrame({'Temperature ('+tempUnit+')': T, 'Pressure ('+pressureUnit+')': P, 'Eq. Structure': eqStructure}, [i for i in range(len(T))])
-            data = pd.DataFrame(simFunctions.generateOutput(components, moleFractions, salts, saltConcs, inhibitors, inhibitorConcs, T, TInhibited, P, simResult, IDs))
+            data = pd.DataFrame(simFunctions.generateOutput(compounds, components, moleFractions, salts, saltConcs, inhibitors, inhibitorConcs, T, TInhibited, P, simResult, IDs))
         st.dataframe(displayData, hide_index = True)
         c1, c2 = st.columns(2)
         with c1:

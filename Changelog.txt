@@ -1,2 +1,10 @@
 Web Application:
-1. Fixed an issue where uploading system compositions would result in components offset by 1
+1. Fixed an issue where the input template had the wrong component order
+2. Only the temperature (or pressure) and composition is required on input CSV file, and the program will
+   automatically guess if no guesses are provided
+3. Added some handling of user error to reduce amount of script breaks (still WIP)
+
+Backend:
+1. Output CSV will only show different compositions for each point if composition is not uniform across all points
+2. If a composition is not defined on an input CSV line, it will now default to the composition of the point above it
+3. Improvements to output CSV template

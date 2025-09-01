@@ -58,8 +58,13 @@ else:
         pointMoleFractions = []
         for j in range(len(IDs)):
             if guessFile[:,2+j][i] != 0 and numpy.isnan(guessFile[:,2+j][i]) == False:
-                pointComponents.append(j+1)
+                pointComponents.append(j)
                 pointMoleFractions.append(guessFile[:,2+j][i])
+                components += [pointComponents]
+                moleFractions += [pointMoleFractions]
+            else:
+                components[i] = components[i-1]
+                moleFractions[i] = moleFractions[i-1]   
         components += [pointComponents]
         moleFractions += [pointMoleFractions]
 

@@ -498,6 +498,8 @@ def guessPressure(compounds, moleFractions, T):
 
 def guessTemp(compounds, moleFractions, P):
     def pressureMatch(guessT, P, compounds, moleFractions):
+        if guessT > 373.15:
+            guessT = 373.15
         return P - guessPressure(compounds, moleFractions, guessT)
     
     guessTemp = scipy.optimize.fsolve(pressureMatch, [273.15], args = (P, compounds, moleFractions))
@@ -536,35 +538,58 @@ def hydrateDensity(structure, occupancies, compoundData, moleFractions, T, P):
             
     return round(waterMass + guestMass, 1)
 
-def generateOutput(componentNames, moleFractions, salts, saltConcs, inhibitors, 
+def generateOutput(componentNames, componentIDs, moleFractions, salts, saltConcs, inhibitors, 
                    inhibitorConcs, T, TInhibited, P, convergence, IDs):
     numpy.set_printoptions(suppress=True)
     with open("Output Template.csv", newline='', encoding='utf-8-sig') as csvfile:
         reader = list(csv.reader(csvfile))
 
         #Add salts and inhibitors
-        lineNo = 0
+        inhibitorLineNo = 0
         for i in range(len(salts)):
             if saltConcs[i] != 0:
-                reader.insert(3+lineNo, [salts[i],saltConcs[i]])
-                lineNo += 1
+                reader.insert(3+inhibitorLineNo, [salts[i],saltConcs[i], None, None, None])
+                inhibitorLineNo += 1
         for i in range(len(inhibitors)):
             if inhibitorConcs[i] != 0:
-                reader.insert(3+lineNo, [inhibitors[i],inhibitorConcs[i]])
-                lineNo += 1
+                reader.insert(3+inhibitorLineNo, [inhibitors[i],inhibitorConcs[i], None, None, None])
+                inhibitorLineNo += 1
                
+        
+        if len(set(tuple(row) for row in moleFractions)) == 1 and len(set(tuple(row) for row in componentIDs)) == 1:
+            j = 0
+            for i in range(len(IDs)):
+                if int(i+1) in componentIDs[0]:
+                    if j < inhibitorLineNo:
+                        reader[3+j][3] = componentNames[i]
+                        reader[3+j][4] = moleFractions[0][j]
+                        j += 1
+                    else:
+                        reader.insert(3+j, [None, None, None, componentNames[i],moleFractions[0][j]])
+                        j += 1
+
+            reader = [row[:9] for row in reader]
+
         for i in range(len(T)):
             P[i] *= 10
+            if T[i] > 100:
+                T[i] = round(T[i] - 273.15,1)
+                TInhibited[i] = round(TInhibited[i] - 273.15,1)
+            else:
+                T[i] = round(T[i],1)
+                TInhibited[i] = round(TInhibited[i],1)
             try:
                 insertList = [T[i], TInhibited[i], P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
             except:
                 insertList = [T[i], None, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
-            for j in range(len(IDs)):
-                if int(j+1) in componentNames[i]:
-                    index = componentNames[i].index(int(j+1))
-                    insertList.append(moleFractions[i][index])
-                else:
-                    insertList.append('')
+            if len(set(tuple(row) for row in moleFractions)) != 1 or len(set(tuple(row) for row in componentIDs)) != 1:
+                for j in range(len(IDs)):
+                    if int(j+1) in componentIDs[i]:
+                        index = componentIDs[i].index(int(j+1))
+                        insertList.append(moleFractions[i][index])
+                    else:
+                        insertList.append('')
+                del(reader[2][3:])
             reader.insert(5+len(salts)+len(inhibitors)+i, insertList)
         
     return reader
