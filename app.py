@@ -52,7 +52,7 @@ with c2:
         base64.b64encode(open("thumbnail_P2F_logo(green) (FULL).png", "rb").read()).decode()
     ), unsafe_allow_html=True)
 
-st.caption('Version 1.3.7')
+st.caption('Version 1.3.8')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
@@ -138,7 +138,10 @@ if programType == "Equilibrium Calculation":
                 nonNormalSum = sum(moleFractions)
 
                 for i in range(len(moleFractions)):
-                    moleFractions[i]/=nonNormalSum
+                    try:
+                        moleFractions[i]/=nonNormalSum
+                    except:
+                        pass
 
                 normDf = pd.DataFrame([])
                 for i in range(len(componentList)):
@@ -481,8 +484,8 @@ if programType == "Equilibrium Calculation":
 
 elif programType == "Minimum Concentration Calculation":
     tempUnit = st.radio("Temperature Unit", ["K", "°C", "°F"], horizontal=True)
-    T = float(st.text_input("Fresh Water Equilibrium Temperature ("+tempUnit+"): ", value="280"))
-    TDesired = float(st.text_input("Desired Inhibited Equilibrium Temperature ("+tempUnit+"): ", value="275"))
+    T = float(st.text_input("Fresh Water Equilibrium Temperature ("+tempUnit+"): ", value=round(simFunctions.tempConversion(tempUnit, 280, False),1)))
+    TDesired = float(st.text_input("Desired Inhibited Equilibrium Temperature ("+tempUnit+"): ", value=round(simFunctions.tempConversion(tempUnit, 275, False),1)))
 
     components = []
     moleFractions = []
@@ -586,7 +589,7 @@ elif programType == "Minimum Concentration Calculation":
         T = simFunctions.tempConversion(tempUnit, T, False)
         Tlist = [T-0.5, T, T+0.5]
 
-        guessP = [simFunctions.guessPressure(components, moleFractions, Tlist[0]), simFunctions.guessPressure(components, moleFractions, Tlist[1]), simFunctions.guessPressure(components, moleFractions, Tlist[2])]
+        guessP = [simFunctions.guessPressure(components, moleFractions, Tlist[0])*1E6, simFunctions.guessPressure(components, moleFractions, Tlist[1])*1E6, simFunctions.guessPressure(components, moleFractions, Tlist[2])*1E6]
 
         simResults = [equilibriumPressure(Tlist[0], guessP[0], components, moleFractions, [], []),
              equilibriumPressure(Tlist[1], guessP[1], components, moleFractions, [], []),

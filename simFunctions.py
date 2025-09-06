@@ -479,7 +479,10 @@ def pressureConversion(pressureUnit, P, toMPa):
 
 def guessPressure(compounds, moleFractions, T):
     noCompounds = len(compounds)
-    guessConsts = numpy.array(guessConstants.loc[guessConstants['Compound ID'] == compounds[0]])
+    try:
+        guessConsts = numpy.array(guessConstants.loc[guessConstants['Compound ID'] == compounds[0]])
+    except:
+        return math.inf
     for i in range(noCompounds-1):
         guessConsts = numpy.append(guessConsts, guessConstants.loc[guessConstants['Compound ID'] == compounds[i+1]], axis = 0)
 
@@ -609,7 +612,10 @@ def massToMolFrac(compounds, weightFracs):
 
     moleFracs = []
     for i in range(len(compounds)):
-        moleFracs.append(mols[i]/sum(mols)*sum(weightFracs))
+        try:
+            moleFracs.append(mols[i]/sum(mols)*sum(weightFracs))
+        except:
+            moleFracs.append(0)
         
     return moleFracs
 
