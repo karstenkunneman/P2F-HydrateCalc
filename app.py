@@ -52,7 +52,7 @@ with c2:
         base64.b64encode(open("thumbnail_P2F_logo(green) (FULL).png", "rb").read()).decode()
     ), unsafe_allow_html=True)
 
-st.caption('Version 1.3.8')
+st.caption('Version 1.3.9')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
@@ -417,28 +417,31 @@ if programType == "Equilibrium Calculation":
                         eqTemperature[i] = round(eqTemperature[i], 1)
             else:
                 if definedVariable == "T":
-                    simResult[i] = equilibriumPressure(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
-                    eqPressure[0] = simResult[i][0]/1E6
+                    simResult[0] = equilibriumPressure(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
+                    eqPressure[0] = simResult[0][0]/1E6
                     eqTemperature = T
                 elif definedVariable == "P":
-                    simResult[i] = equilibriumTemperature(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
-                    eqTemperature[0] = simResult[i][0]
+                    simResult[0] = equilibriumTemperature(T[0], P[0], components, moleFractions, saltConcs, inhibitorConcs)
+                    eqTemperature[0] = simResult[0][0]
                     for i in range(len(P)):
                         P[i] /= 1E6
                     eqPressure = P
-                eqStructure[0] = simResult[i][1]
-                eqFractions[0] = [[round(float(simResult[i][2][0][j]), 4) for j in range(len(simResult[i][2][0]))], [round(float(simResult[i][2][1][j]), 4) for j in range(len(simResult[i][2][1]))]]
-                hydrationNumber[0] = simResult[i][3]
-                hydrateDensity[0] = simResult[i][4]
-                eqPhase[0] = simResult[i][5]
-                freezingPoint = simResult[i][6]
+                eqStructure[0] = simResult[0][1]
+                eqFractions[0] = [[round(float(simResult[0][2][0][j]), 4) for j in range(len(simResult[0][2][0]))], [round(float(simResult[0][2][1][j]), 4) for j in range(len(simResult[0][2][1]))]]
+                hydrationNumber[0] = simResult[0][3]
+                hydrateDensity[0] = simResult[0][4]
+                eqPhase[0] = simResult[0][5]
+                freezingPoint = simResult[0][6]
                 eqFractions = numpy.array(eqFractions)
                 for i in range(len(T)):
                     if sum(inhibitorConcs) + sum(saltConcs) != 0:
                         TInhibited[i] = round(simFunctions.HuLeeSum(eqTemperature[0], saltConcs, inhibitorConcs, betaGas, freezingPoint), 1)
                     else:
                         TInhibited[i] = eqTemperature[0]
-                    T[i] = round(simFunctions.tempConversion(tempUnit, T[i], True), 1)
+                    if definedVariable == "T":
+                        T[i] = round(simFunctions.tempConversion(tempUnit, T[i], True), 1)
+                    else:
+                        T[i] = round(simFunctions.tempConversion(tempUnit, T[i][0], True), 1)
                     if TInhibited[i] != None:
                         TInhibited[i] = round(simFunctions.tempConversion(tempUnit, TInhibited[i], True), 1)
                     eqPressure[i] = simFunctions.pressureConversion(pressureUnit, eqPressure[i], True)

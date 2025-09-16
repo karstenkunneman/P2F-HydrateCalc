@@ -558,17 +558,30 @@ def generateOutput(componentNames, componentIDs, moleFractions, salts, saltConcs
                 reader.insert(3+inhibitorLineNo, [inhibitors[i],inhibitorConcs[i], None, None, None])
                 inhibitorLineNo += 1
                
-        
-        if len(set(tuple(row) for row in moleFractions)) == 1 and len(set(tuple(row) for row in componentIDs)) == 1:
+        try:
+            if len(set(tuple(row) for row in moleFractions)) == 1 and len(set(tuple(row) for row in componentIDs)) == 1:
+                j = 0
+                for i in range(len(IDs)):
+                    if int(i+1) in componentIDs[0]:
+                        if j < inhibitorLineNo:
+                            reader[3+j][3] = componentNames[i]
+                            reader[3+j][4] = moleFractions[0][j]
+                            j += 1
+                        else:
+                            reader.insert(3+j, [None, None, None, componentNames[i],moleFractions[0][j]])
+                            j += 1
+
+                reader = [row[:9] for row in reader]
+        except:
             j = 0
             for i in range(len(IDs)):
-                if int(i+1) in componentIDs[0]:
+                if int(i+1) in componentIDs:
                     if j < inhibitorLineNo:
                         reader[3+j][3] = componentNames[i]
                         reader[3+j][4] = moleFractions[0][j]
                         j += 1
                     else:
-                        reader.insert(3+j, [None, None, None, componentNames[i],moleFractions[0][j]])
+                        reader.insert(3+j, [None, None, None, componentNames[i],moleFractions[j]])
                         j += 1
 
             reader = [row[:9] for row in reader]
@@ -585,11 +598,20 @@ def generateOutput(componentNames, componentIDs, moleFractions, salts, saltConcs
                 insertList = [T[i], TInhibited[i], P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
             except:
                 insertList = [T[i], None, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
-            if len(set(tuple(row) for row in moleFractions)) != 1 or len(set(tuple(row) for row in componentIDs)) != 1:
+            try:
+                if len(set(tuple(row) for row in moleFractions)) != 1 or len(set(tuple(row) for row in componentIDs)) != 1:
+                    for j in range(len(IDs)):
+                        if int(j+1) in componentIDs[i]:
+                            index = componentIDs[i].index(int(j+1))
+                            insertList.append(moleFractions[i][index])
+                        else:
+                            insertList.append('')
+                    del(reader[2][3:])
+            except:
                 for j in range(len(IDs)):
-                    if int(j+1) in componentIDs[i]:
-                        index = componentIDs[i].index(int(j+1))
-                        insertList.append(moleFractions[i][index])
+                    if int(j+1) in componentIDs:
+                        index = componentIDs.index(int(j+1))
+                        insertList.append(moleFractions[index])
                     else:
                         insertList.append('')
                 del(reader[2][3:])
@@ -874,7 +896,7 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
         SIIEqTemperature = math.inf
         SIIEqFrac = numpy.zeros((2,len(moleFractions)))
     
-    if SIIEqTemperature <= SIEqTemperature:
+    if SIIEqTemperature <= SIEqTemperature and SIEqTemperature != math.inf:
         eqStructure = "I"
         EqFrac = SIEqFrac
     else:
@@ -882,9 +904,11 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
         EqFrac = SIIEqFrac
 
     if SIEqTemperature != math.inf and SIIEqTemperature != math.inf:
-        eqTemperature = min(SIEqTemperature, SIIEqTemperature)
+        eqTemperature = max(SIEqTemperature, SIIEqTemperature)
+    elif SIEqTemperature == math.inf and SIIEqTemperature != math.inf:
+        eqTemperature = SIIEqTemperature
     else:
-        eqTemperature = math.inf
+        eqTemperature = SIEqTemperature
 
     if waterPhase == "ice":
         equilPhase = "I-H-V"
