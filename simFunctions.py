@@ -505,7 +505,7 @@ def guessTemp(compounds, moleFractions, P):
             guessT = 373.15
         return P - guessPressure(compounds, moleFractions, guessT)
     
-    guessTemp = scipy.optimize.fsolve(pressureMatch, [273.15], args = (P, compounds, moleFractions))
+    guessTemp = scipy.optimize.fsolve(pressureMatch, [273.15], args = (P, compounds, moleFractions))+5
 
     return guessTemp
 

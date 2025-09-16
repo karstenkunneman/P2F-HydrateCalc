@@ -1,5 +1,2 @@
-Web Application:
-1. Fixed an issue where single-point calculations would result in a crash
-
 Backend:
-1. Fixed an issue that could cause P-defined calculations to not return properly
+1. Fixed an issue that could cause a prediction of ice-phase hydrate behavior above the freezing point of water
