@@ -58,7 +58,7 @@ else:
         pointMoleFractions = []
         for j in range(len(IDs)):
             if guessFile[:,2+j][i] != 0 and numpy.isnan(guessFile[:,2+j][i]) == False:
-                pointComponents.append(j)
+                pointComponents.append(j+1)
                 pointMoleFractions.append(guessFile[:,2+j][i])
                 components += [pointComponents]
                 moleFractions += [pointMoleFractions]
@@ -97,7 +97,7 @@ if speccedParameter == "T":
             if guessP != "N":
                 P = [float(input("Guess Pressure (MPa): "))*1E6]
             else:
-                P = simFunctions.guessPressure(components, moleFractions, T[0])
+                P = [simFunctions.guessPressure(components, moleFractions, T[0])]
 elif speccedParameter == "P":
     if usecsv != "Y":
         uniformComposition = "Y"
@@ -156,7 +156,7 @@ hydrateDensity = numpy.zeros(len(T))
 
 convergence = [None for i in range(len(T))]
 
-if speccedParameter == "T":
+if speccedParameter == "T":    
     eqPressure = numpy.zeros(len(T), dtype=float)
     for i in range(len(T)):
         if uniformComposition == "N":
@@ -223,8 +223,8 @@ else:
 print("Time to Complete Calculation: " + str(round(endTime-startTime, 3)) + " seconds")
 print("per Data Point: " + str(round((endTime-startTime)/noPoints, 3)) + " seconds")
 
-with open(exportFileName, mode = 'w', newline='') as file:
-    data = simFunctions.generateOutput(components, moleFractions, salts, saltConcs, inhibitors, inhibitorConcs, T, TInhibited, eqPressure, convergence, IDs)
+with open(exportFileName, mode = 'w', encoding='utf-8-sig', newline='') as file:
+    data = simFunctions.generateOutput(compounds, components, moleFractions, salts, saltConcs, inhibitors, inhibitorConcs, T, TInhibited, eqPressure, convergence, IDs, "K", "bar")
     writer = csv.writer(file)
     writer.writerows(data)
 

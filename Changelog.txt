@@ -1,2 +1,10 @@
+Web Application:
+	1. The number of decimals on output values can now be selected
+
+Commandline:
+	1. Fixed a series of issues with output generation
+
 Backend:
-1. Fixed an issue that could cause a prediction of ice-phase hydrate behavior above the freezing point of water
+	1. User-selected output units now carry through to the data output file
+	2. Fixed an issue where single-component calculations with inhibitors would result in a crash
+	3. Fixed an issue which would cause occupancy (and related variable) output to be dependent on guesses

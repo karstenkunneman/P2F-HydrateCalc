@@ -542,10 +542,14 @@ def hydrateDensity(structure, occupancies, compoundData, moleFractions, T, P):
     return round(waterMass + guestMass, 1)
 
 def generateOutput(componentNames, componentIDs, moleFractions, salts, saltConcs, inhibitors, 
-                   inhibitorConcs, T, TInhibited, P, convergence, IDs):
+                   inhibitorConcs, T, TInhibited, P, convergence, IDs, tempUnit, pressureUnit):
     numpy.set_printoptions(suppress=True)
     with open("Output Template.csv", newline='', encoding='utf-8-sig') as csvfile:
         reader = list(csv.reader(csvfile))
+
+        if not isinstance(moleFractions[0], list):
+            moleFractions = [moleFractions]
+            componentIDs = [componentIDs]
 
         #Add salts and inhibitors
         inhibitorLineNo = 0
@@ -586,18 +590,16 @@ def generateOutput(componentNames, componentIDs, moleFractions, salts, saltConcs
 
             reader = [row[:9] for row in reader]
 
+        headerRow = len(reader)
+        reader[headerRow-1][0] = "T (" + tempUnit + ")"
+        reader[headerRow-1][1] = "Inhib. T (" + tempUnit + ")"
+        reader[headerRow-1][2] = "P (" + pressureUnit + ")"
+
         for i in range(len(T)):
-            P[i] *= 10
-            if T[i] > 100:
-                T[i] = round(T[i] - 273.15,1)
-                TInhibited[i] = round(TInhibited[i] - 273.15,1)
-            else:
-                T[i] = round(T[i],1)
-                TInhibited[i] = round(TInhibited[i],1)
             try:
-                insertList = [T[i], TInhibited[i], P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
+                insertList = [tempConversion(tempUnit, T[i], False), tempConversion(tempUnit, TInhibited[i], False), pressureConversion(pressureUnit, P[i], False), convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
             except:
-                insertList = [T[i], None, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
+                insertList = [tempConversion(tempUnit, T[i], False), None, pressureConversion(pressureUnit, P[i], False), convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
             try:
                 if len(set(tuple(row) for row in moleFractions)) != 1 or len(set(tuple(row) for row in componentIDs)) != 1:
                     for j in range(len(IDs)):
@@ -716,7 +718,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
     try:
         if "I" in PvapConsts[:,0]:
             SIEqPressure = abs(scipy.optimize.fsolve(f,pGuess,xtol=errorMargin,args=temperature)[0])
-            SIEqFrac = hydrateFugacity(temperature, SIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
+            SIEqFrac = hydrateFugacity(temperature, SIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, SIEqPressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
         else:
             raise
     except:
@@ -758,7 +760,7 @@ def equilibriumPressure(temperature, pressure, compounds, moleFractions, saltCon
 
     try:
         SIIEqPressure = abs(scipy.optimize.fsolve(f,[pGuess],xtol=errorMargin,args=temperature)[0])
-        SIIEqFrac = hydrateFugacity(temperature, SIIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
+        SIIEqFrac = hydrateFugacity(temperature, SIIEqPressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, SIIEqPressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
     except:
         SIIEqPressure = math.inf
         SIIEqFrac = numpy.zeros((2,noCompounds))
@@ -849,7 +851,7 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
     try:
         if "I" in PvapConsts[:,0]:
             SIEqTemperature = abs(scipy.optimize.fsolve(f,tGuess,xtol=errorMargin,args=pressure)[0])
-            SIEqFrac = hydrateFugacity(SIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
+            SIEqFrac = hydrateFugacity(SIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, SIEqTemperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
         else:
             raise
     except:
@@ -891,7 +893,7 @@ def equilibriumTemperature(temperature, pressure, compounds, moleFractions, salt
         
     try:
         SIIEqTemperature = abs(scipy.optimize.fsolve(f,[tGuess],xtol=errorMargin,args=pressure)[0])
-        SIIEqFrac = hydrateFugacity(SIIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, temperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
+        SIIEqFrac = hydrateFugacity(SIIEqTemperature, pressure, localPvapConsts, structure, PengRobinson(compoundData, moleFractions, SIIEqTemperature, pressure, interactionParameters)[2], compounds, kiharaParameters, compoundData, Ac, Bc, Dc)[1]
     except:
         SIIEqTemperature = math.inf
         SIIEqFrac = numpy.zeros((2,len(moleFractions)))
