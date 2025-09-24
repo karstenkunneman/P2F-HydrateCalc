@@ -597,9 +597,9 @@ def generateOutput(componentNames, componentIDs, moleFractions, salts, saltConcs
 
         for i in range(len(T)):
             try:
-                insertList = [tempConversion(tempUnit, T[i], False), tempConversion(tempUnit, TInhibited[i], False), pressureConversion(pressureUnit, P[i], False), convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
+                insertList = [T[i], TInhibited[i], P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
             except:
-                insertList = [tempConversion(tempUnit, T[i], False), None, pressureConversion(pressureUnit, P[i], False), convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
+                insertList = [T[i], None, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
             try:
                 if len(set(tuple(row) for row in moleFractions)) != 1 or len(set(tuple(row) for row in componentIDs)) != 1:
                     for j in range(len(IDs)):
