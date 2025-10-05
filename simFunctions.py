@@ -541,6 +541,25 @@ def hydrateDensity(structure, occupancies, compoundData, moleFractions, T, P):
             
     return round(waterMass + guestMass, 1)
 
+def guestComp(thetaSmall, thetaLarge, structure):
+    normalizedComps = numpy.zeros(len(thetaSmall))
+
+    for i in range(len(normalizedComps)):
+        if structure == "I":
+                normalizedComps[i] = 2*thetaSmall[i]+6*thetaLarge[i]
+        else:
+                normalizedComps[i] = 16*thetaSmall[i]+8*thetaLarge[i]
+
+    fracs = numpy.zeros(len(thetaSmall))
+    sumComps = sum(normalizedComps)
+    for i in range(len(normalizedComps)):
+        if structure == "I":
+                fracs[i] = round((2*thetaSmall[i]+6*thetaLarge[i])/sumComps,4)
+        else:
+                fracs[i] = round((16*thetaSmall[i]+8*thetaLarge[i])/sumComps,4)
+
+    return fracs
+
 def generateOutput(componentNames, componentIDs, moleFractions, salts, saltConcs, inhibitors, 
                    inhibitorConcs, T, TInhibited, P, convergence, IDs, tempUnit, pressureUnit):
     numpy.set_printoptions(suppress=True)
@@ -575,7 +594,7 @@ def generateOutput(componentNames, componentIDs, moleFractions, salts, saltConcs
                             reader.insert(3+j, [None, None, None, componentNames[i],moleFractions[0][j]])
                             j += 1
 
-                reader = [row[:9] for row in reader]
+                reader = [row[:10] for row in reader]
         except:
             j = 0
             for i in range(len(IDs)):
@@ -588,7 +607,7 @@ def generateOutput(componentNames, componentIDs, moleFractions, salts, saltConcs
                         reader.insert(3+j, [None, None, None, componentNames[i],moleFractions[j]])
                         j += 1
 
-            reader = [row[:9] for row in reader]
+            reader = [row[:10] for row in reader]
 
         headerRow = len(reader)
         reader[headerRow-1][0] = "T (" + tempUnit + ")"
@@ -597,9 +616,9 @@ def generateOutput(componentNames, componentIDs, moleFractions, salts, saltConcs
 
         for i in range(len(T)):
             try:
-                insertList = [T[i], TInhibited[i], P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
+                insertList = [T[i], TInhibited[i], P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5], str(guestComp(convergence[i][2][0].tolist(), convergence[i][2][1].tolist(), convergence[i][1]).tolist())]
             except:
-                insertList = [T[i], None, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5]]
+                insertList = [T[i], None, P[i], convergence[i][1], str(convergence[i][2][0].tolist()), str(convergence[i][2][1].tolist()), convergence[i][3], convergence[i][4], convergence[i][5], str(guestComp(convergence[i][2][0].tolist(), convergence[i][2][1].tolist(), convergence[i][1]).tolist())]
             try:
                 if len(set(tuple(row) for row in moleFractions)) != 1 or len(set(tuple(row) for row in componentIDs)) != 1:
                     for j in range(len(IDs)):

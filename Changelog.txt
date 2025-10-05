@@ -1,2 +1,2 @@
 Backend:
-	1. Fixed an issue where the program would attempt to convert units twice, resulting in errant values
+	1. Output file now includes the molar fractions of guest gases in the hydrate phase (y_i^H)
