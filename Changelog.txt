@@ -1,2 +1,7 @@
+Web app:
+	1. Fixed a visual bug for single-temperature/pressure calculations which would result in default values
+           with excessive trailing decimals
+	2. Fixed an issue where single-temperature/pressure calculations would return values converted in the
+	   wrong direction
 Backend:
-	1. Output file now includes the molar fractions of guest gases in the hydrate phase (y_i^H)
+	1. Fixed an issue with inhibited temperature calculations

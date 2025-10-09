@@ -52,7 +52,7 @@ with c2:
         base64.b64encode(open("thumbnail_P2F_logo(green) (FULL).png", "rb").read()).decode()
     ), unsafe_allow_html=True)
 
-st.caption('Version 1.3.13')
+st.caption('Version 1.3.14')
 
 programType = st.radio("Calculation Type", ["Equilibrium Calculation", "Minimum Concentration Calculation"], horizontal=True)
 
@@ -248,10 +248,10 @@ if programType == "Equilibrium Calculation":
             hydrateType = st.radio("Hydrate Type", ["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"], horizontal=False)
             betaGas = [9.120E-4, 8.165E-4, 9.186E-4, 9.432E-4, 1.058E-3, 8.755E-4][["Pure Methane", "Pure Ethane", "Pure CO2", "Generic Structure I", "Propane", "Generic Structure II"].index(hydrateType)]
             if definedVariable == "T":
-                T = [simFunctions.tempConversion(tempUnit, float(st.text_input('Temperature ('+tempUnit+')', simFunctions.tempConversion(tempUnit, 278.1, False))), True)]
+                T = [simFunctions.tempConversion(tempUnit, float(st.text_input('Temperature ('+tempUnit+')', round(simFunctions.tempConversion(tempUnit, 278.1, False),1))), True)]
                 P = [simFunctions.guessPressure(components, moleFractions, T[0])]
             else:
-                P = [simFunctions.pressureConversion(pressureUnit, float(st.text_input('Pressure ('+pressureUnit+')', simFunctions.pressureConversion(pressureUnit, 4.429, False))), True)*1E6]
+                P = [simFunctions.pressureConversion(pressureUnit, float(st.text_input('Pressure ('+pressureUnit+')', round(simFunctions.pressureConversion(pressureUnit, 4.429, False),1))), True)*1E6]
                 T = [simFunctions.guessTemp(components, moleFractions, P[0])]
 
     else:
@@ -444,15 +444,17 @@ if programType == "Equilibrium Calculation":
                     else:
                         TInhibited[i] = eqTemperature[0]
                     if definedVariable == "T":
-                        T[i] = round(simFunctions.tempConversion(tempUnit, T[i], True), TDecimals)
+                        T[i] = round(simFunctions.tempConversion(tempUnit, T[i], False), TDecimals)
                     else:
-                        T[i] = round(simFunctions.tempConversion(tempUnit, T[i][0], True), TDecimals)
+                        T[i] = round(simFunctions.tempConversion(tempUnit, T[i][0], False), TDecimals)
+                        eqTemperature[i] = simFunctions.tempConversion(tempUnit, eqTemperature[i], False)
+                        eqTemperature[i] = round(eqTemperature[i], TDecimals)
                     if TInhibited[i] != None:
-                        TInhibited[i] = round(simFunctions.tempConversion(tempUnit, TInhibited[i], True), TDecimals)
-                    eqPressure[i] = simFunctions.pressureConversion(pressureUnit, eqPressure[i], True)
-                    eqPressure[i] = round(eqPressure[i], PDecimals)
-                    eqTemperature[i] = simFunctions.tempConversion(tempUnit, eqTemperature[i], True)
-                    eqTemperature[i] = round(eqTemperature[i], TDecimals)
+                        TInhibited[i] = round(simFunctions.tempConversion(tempUnit, TInhibited[i], False), TDecimals)
+                    
+                    eqPressure[i] = simFunctions.pressureConversion(pressureUnit, eqPressure[i], False)
+                    eqPressure[i] = round(eqPressure[i], PDecimals) 
+
             endTime = time.time()
             st.text("Time to Complete Calculation: " + str(round(endTime-startTime, 3)) + " seconds")
             if len(T) > 1:

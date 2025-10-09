@@ -436,7 +436,7 @@ def betaGas(temperatures, pressures):
     try:
         slope = numpy.polyfit(inverseTemp, lnPressure, 1)[0]
     
-        betaGas = -10/slope
+        betaGas = -8.314/slope
 
     except:
         betaGas = 0
