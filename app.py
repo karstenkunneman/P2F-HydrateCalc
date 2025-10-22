@@ -626,6 +626,8 @@ st.caption("Disclaimer: The model and predictions have been tested and verified 
 
 st.markdown('''Questions, suggestions, or bug reports? Please send an email to asum@mines.edu''')
 
+st.markdown('''To cite this software, please cite the following article: [[doi: 10.1016/j.softx.2025.102422]](https://www.sciencedirect.com/science/article/pii/S2352711025003887)''')
+
 st.header('Credits')
 st.markdown('''
             Developed by Karsten Kunneman in collaboration with Prof. Amadeu K. Sum at the Colorado School of Mines
