@@ -624,9 +624,9 @@ elif programType == "Minimum Concentration Calculation":
 
 st.caption("Disclaimer: The model and predictions have been tested and verified to be accurate based on extensive comparison with available literature data. However, this web app is provided ""as is"" and ""as available"" without any warranties of any kind, either express or implied, including, but not limited to, implied warranties of use, merchantability, fitness for a particular purpose, and non-infringement.")
 
-st.markdown('''Questions, suggestions, or bug reports? Please send an email to asum@mines.edu''')
+st.markdown('''To cite this software, use the following article: [[doi: 10.1016/j.softx.2025.102422]](https://doi.org/10.1016/j.softx.2025.102422)''')
 
-st.markdown('''To cite this software, please cite the following article: [[doi: 10.1016/j.softx.2025.102422]](https://www.sciencedirect.com/science/article/pii/S2352711025003887)''')
+st.markdown('''Questions, suggestions, or bug reports? Please send an email to asum@mines.edu''')
 
 st.header('Credits')
 st.markdown('''
