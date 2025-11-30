@@ -2,4 +2,4 @@ numpy==1.26.4
 streamlit==1.40.0
 matplotlib
 thermo==0.5.0
-p2f_HyrateCalcLib==0.1.0.7
+p2f_HydrateCalcLib==0.1.0.7
