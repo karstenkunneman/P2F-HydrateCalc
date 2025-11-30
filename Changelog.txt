@@ -1,7 +1,17 @@
 Web app:
-	1. Fixed a visual bug for single-temperature/pressure calculations which would result in default values
-           with excessive trailing decimals
-	2. Fixed an issue where single-temperature/pressure calculations would return values converted in the
-	   wrong direction
+	1. Changed the default simulation conditions to provide a more aesthetically pleasing graph
+	2. Added a column to the "Full Dataset" download which indicates the gas storage capacity of generated hydrate
+	3. Fixed an issue which would break the Minimum Concentration Calculation functionality
+	4. Full Dataset download now rounds component concentrations to 2 decimals instead of 4 (reflecting precision
+	   in web app)
+	5. Default number of points is now standardized to 8
+	6. Fixed a bug which would cause an error when checking for max concentration of inhibitors in multipoint
+	   calculations
+
+Commandline:
+	1. Removed, as all functionality is made redundant by p2f_HydrateCalcLib library
+
 Backend:
-	1. Fixed an issue with inhibited temperature calculations
+	1. Replaced simulation functions with those in the new p2f_HydrateCalcLib library, improving performance and 
+	   reducing complexity
+	2. Upgraded to Python 3.12 and downgraded to Streamlit 1.40.0 to maintain compatibility

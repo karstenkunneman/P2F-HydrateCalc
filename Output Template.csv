@@ -1,5 +1,5 @@
-﻿P2F Lab :: Gas Hydrate Equilibrium Predictions Calculator,,,,,,,,,,,,,,,,,,,
-Version 1.3.14,,,,,,,,,,,,,,,,,,,
-Inhibitor,wt%,,Component,mol%,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,
-T,Inhib. T,P,Structure,Θ_small,Θ_large,⋅nH2O,Density (kg/m^3),Phases,y_i^H,CH4,C2H6,C3H8,i-C4H10,C5H12,C6H14,CO2,H2S,N2,O2
+﻿P2F Lab :: Gas Hydrate Equilibrium Predictions Calculator,,,,,,,,,,,,,,,,,,,,
+Version 1.4.0,,,,,,,,,,,,,,,,,,,,
+Inhibitor,wt%,,Component,mol%,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,
+T,Inhib. T,P,Structure,Θ_small,Θ_large,⋅nH2O,Density (kg/m^3),Storage (kg/m^3),Phases,y_i^H,CH4,C2H6,C3H8,i-C4H10,C5H12,C6H14,CO2,H2S,N2,O2

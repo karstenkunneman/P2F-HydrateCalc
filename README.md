@@ -1,7 +1,7 @@
 A Web Python-Based Tool for the Prediction of Natural Gas Hydrates Equilibrium and Inhibition.
 Developed by Karsten Kunneman in collaboration with Prof. Amadeu K. Sum at the Colorado School of Mines
 
-Version 1.3.14 - 2025/10/08
+Version 1.4.0 - 11/30/2025
 
 This tool is designed to determine the equilibrium conditions for a given single- or multiple-component
 hydrate system, including systems in the presence of inhibitors (alcohols, glycols, and salts). 
@@ -15,9 +15,10 @@ This tool is based primarily on the following models:
  - Universal correlation for gas hydrates suppression temperature of inhibited systems: III. salts and 
    organic inhibitors by Y. Hu, J.-H. Sa, B. R. Lee, and A. K. Sum [doi: 10.1002/aic.16369]
 
-For Questions, Suggestions, or Bug Reports, please contact:
-Karsten Kunneman: karstenkunneman@mines.edu (Inactive after December 2025)
-Prof. Amadeu K. Sum: asum@mines.edu
+To cite this tool, please cite:
+p2f-hydratecalc: A web Python-based tool for the prediction of natural gas hydrate equilibrium and inhibition by Karsten Kunneman and Amadeu K. Sum [doi: 10.1016/j.softx.2025.102422]
+
+For Questions, Suggestions, or Bug Reports, please contact Prof. Amadeu K. Sum: asum@mines.edu
 
 Disclaimer:
 The model and predictions have been tested and verified to be accurate based on extensive comparison with 
@@ -26,6 +27,6 @@ warranties of any kind, either express or implied, including, but not limited to
 use, merchantability, fitness for a particular purpose, and non-infringement.
 
 ©2025, All Rights Reserved
-Full source code available at https://github.com/karstenkunneman/Gas-Hydrate-Equilibrium-Calculator
+Full source code available at https://github.com/karstenkunneman/P2F-HydrateCalc
 This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License.
 To view a copy of this license, visit https://creativecommons.org/licenses/by-sa/4.0/.

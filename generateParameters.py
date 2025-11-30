@@ -12,37 +12,23 @@ errorMargin = 1E-9
 fluidProperties = pandas.read_excel('Data.xlsx', sheet_name='Fluid Properties')
 
 #filename = input("Equilibrium Data File name: ")
-filename = 'O2 Data.csv'
+filename = 'c-C3H6 II Data.csv'
 guessFile = pandas.read_csv(filename)
 temperatures = guessFile["T (K)"].tolist()
 pressures = guessFile["P (Mpa)"].tolist()
 for i in range(len(pressures)):
     pressures[i]*=1E6
 structures = guessFile["Structure"].tolist()
-smallFrac = guessFile["Small Cage"].tolist()
-largeFrac = guessFile["Large Cage"].tolist()
+#smallFrac = guessFile["Small Cage"].tolist()
+#largeFrac = guessFile["Large Cage"].tolist()
 
-'''
-compoundData = [[10, "H2S", float(373.1), float(9), float(0.1005),
-                float(0), 0,
-                numpy.array(['{114: 1}'], dtype=object),
-                float(10.457),
-                float(3.631), float(34.082)]]
+compoundData = [[4, "c-C3H6", float(393.3),	float(5.5797),	float(0.1305),	
+                 0,	None, numpy.array(['{2: 3}'], dtype=object),	
+                 float(9.86),	float(5.64),	float(42.08)]]
 
-H = [-149.551, 8227.328, 20.2327, 0.00129]
+H = [-316.4901862, 15922.69753, 44.32853548, 0]
 
-pvapConsts = [4.6446, -5150.369, 2.778907444, -0.0087553]
-
-'''
-compoundData = [[9, "O2", float(154.581), float(5.043), float(.0222),
-                float(0.01512), 0,
-                numpy.array(['{119: 1}'], dtype=object),
-                float(12.07),
-                float(1.562), float(32.00)]]
-
-H = [-286.942, 15450.6, 36.5593, 0.0187662]
-
-pvapConsts = [5.1511 ,-5595.4346, 2.7789, -0.0160445]
+pvapConsts = [4.6652, -5424.1108, 2.7789, -0.0088658]
 
 def Z(compoundData, T, P):
     waterData = numpy.array(fluidProperties.loc[fluidProperties['Compound ID'] == 0])[0]
@@ -55,7 +41,7 @@ def Z(compoundData, T, P):
     localCompoundData[0][4] = float(localCompoundData[0][4])
     localCompoundData[0][5] = float(localCompoundData[0][5])
     
-    Z = simFunctions.PengRobinson(localCompoundData, [0.00001, 0.99999], T, P)[3]
+    Z = simFunctions.PengRobinson(localCompoundData, [0.00001, 0.99999], T, P, [[0,0],[0,0]])[3]
     return Z
 
 def liqPhaseComposition(T, fug_vap, compoundData, P, Psat):
@@ -85,7 +71,7 @@ def freezingPointDepression(T, fug_vap, compoundData, P, chemGroups):
     return deltadT
 
 def getLangConst(T, P, compoundData, structure, i):
-    fug_vap = simFunctions.PengRobinson(compoundData, [1], T, P)[2][0]
+    fug_vap = simFunctions.PengRobinson(compoundData, [1], T, P, [[0,0],[0,0]])[2][0]
 
     if T > 260 and T < 280:
         freezingPoint = 273.15+freezingPointDepression(T, fug_vap, compoundData, P, compoundData[0][7])
@@ -127,19 +113,19 @@ def getLangConst(T, P, compoundData, structure, i):
         nu1 = 0.117647059
         nu2 = 0.058823529
     
-    frac = [[smallFrac[i]],[largeFrac[i]]]
+    #frac = [[smallFrac[i]],[largeFrac[i]]]
     
-    #frac = [[0],[0]]
+    frac = [[0],[0]]
     
-    #def f(frac1):
-    #    if frac1 >=1:
-    #        frac1 = 0.9999999
-    #    frac0 = 0 #1-math.exp((dH-nu2*math.log(1-frac1))/nu1)
-    #    dHexpected = nu1*math.log(1-frac0) + nu2*math.log(1-frac1)
-    #    return abs(dH - dHexpected)
+    def f(frac1):
+        if frac1 >=1:
+            frac1 = 0.9999999
+        frac0 = 0 #1-math.exp((dH-nu2*math.log(1-frac1))/nu1)
+        dHexpected = nu1*math.log(1-frac0) + nu2*math.log(1-frac1)
+        return abs(dH - dHexpected)
     
-    #frac[1][0] = scipy.optimize.minimize(f, 0.984, bounds=[(0,0.9999999)]).x
-    #frac[0][0] = 1-math.exp((dH-nu2*math.log(1-frac[1][0]))/nu1)
+    frac[1][0] = scipy.optimize.minimize(f, 0.90, bounds=[(0,0.9999999)]).x
+    frac[0][0] = 0 #1-math.exp((dH-nu2*math.log(1-frac[1][0]))/nu1)
     
     
     #frac[1][0] = largeFrac[i]
@@ -158,7 +144,7 @@ def generateParameters(T, lang_consts):
     def model(x, A, B, D):
         return numpy.exp(A+B/x+D/x/x)
     
-    initialGuess = [-19.6865, 870.0524, -14208.0553] #Completely arbitrary, based on existing values
+    initialGuess = [-23.18064417, 13.74693553, 65052.41579] #Completely arbitrary, based on existing values
     
     A, B, D = scipy.optimize.curve_fit(model, numpy.array(T).flatten(), numpy.array(lang_consts).flatten(), p0=initialGuess)[0]
     return A, B, D
@@ -170,7 +156,7 @@ for i in range(len(temperatures)):
     Cml[0][i] = consts[0]
     Cml[1][i] = consts[1]
 
-A1, B1, D1 = generateParameters(temperatures, Cml[:][0])
+A1, B1, D1 = -100, 0, 0 #generateParameters(temperatures, Cml[:][0])
 A2, B2, D2 = generateParameters(temperatures, Cml[:][1])
 
 print("Langmuir Constant Parameter Fit:")

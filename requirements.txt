@@ -1,5 +1,5 @@
-numpy==1.21.0
-streamlit
+numpy==1.26.4
+streamlit==1.40.0
 matplotlib
-thermo
-openpyxl
+thermo==0.5.0
+p2f_HyrateCalcLib==0.1.0.7
